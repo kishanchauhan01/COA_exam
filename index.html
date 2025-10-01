@@ -1,524 +1,152 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COA Q&A Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa; /* Light gray background */
-            color: #212529;
-        }
-        .qa-card .answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .qa-card.active .answer {
-            max-height: 2000px; /* Increased max-height for images */
-            margin-top: 1.5rem;
-        }
-        .qa-card.active .arrow {
-            transform: rotate(180deg);
-        }
-        .nav-btn {
-            transition: all 0.2s ease-in-out;
-            border: 1px solid transparent;
-        }
-        .nav-btn.active {
-            background-color: #007bff; /* Primary blue */
-            color: #FFFFFF;
-            box-shadow: 0 4px 14px 0 rgba(0, 118, 255, 0.39);
-            border-color: #007bff;
-        }
-        .topic-btn.active {
-             background-color: #28a745; /* Success green */
-             color: #FFFFFF;
-             border-color: #28a745;
-        }
-        #topic-filters {
-            transition: opacity 0.5s ease-in-out;
-        }
-        .answer img {
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-            margin-bottom: 1rem;
-            max-width: 100%;
-            height: auto;
-            border: 1px solid #dee2e6;
-        }
-        /* Loading Spinner */
-        #loading-overlay {
-            display: none; /* Hidden by default */
-        }
-        #loading-overlay.flex {
-            display: flex;
-        }
-    </style>
-</head>
-<body class="antialiased">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 tracking-tight">Computer Organization & Architecture</h1>
-            <p class="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">An interactive study guide. Select a chapter, filter by topic, and click a question to reveal the answer.</p>
-            <button id="generate-quiz-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 transition-all duration-300 transform hover:scale-105">
-                ✨ Generate a Practice Quiz
-            </button>
-        </header>
-
-        <!-- Chapter Filters -->
-        <nav id="chapter-filters" class="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
-             <p class="w-full text-center font-semibold text-gray-700 mb-2">Filter by Chapter:</p>
-        </nav>
-
-        <!-- Topic Filters -->
-        <nav id="topic-filters" class="flex flex-wrap justify-center gap-2 md:gap-3 mb-12 opacity-0">
-             <p class="w-full text-center font-semibold text-gray-700 mb-2">Filter by Topic:</p>
-        </nav>
-
-        <main id="qa-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Q&A Cards will be injected here -->
-        </main>
-    </div>
-    
-    <!-- Modal for Quiz -->
-    <div id="quiz-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50">
-        <div id="quiz-modal-content" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
-            <button id="close-quiz-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
-            <!-- Quiz content will be injected here -->
-        </div>
-    </div>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-75 items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-    </div>
-
-
-    <script>
-        const qaData = [
-            // Chapter 1
-            {
-                question: "Implement common bus system with 4 registers of four bits using multiplexers.",
-                answer: "A common bus system for four 4-bit registers can be implemented using four 4x1 multiplexers (MUX). Each MUX selects one bit from the four registers. The selection lines (S1, S0) are connected to all MUXes simultaneously to choose which register's data is placed on the bus.<br><br><b>How it works:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>There are 4 registers (R0, R1, R2, R3), each with 4 bits.</li><li>There are 4 multiplexers, one for each bit of the bus (Bus Bit 0 to Bus Bit 3).</li><li>The i-th bit from all four registers is connected to the inputs of the i-th MUX. For example, R0[0], R1[0], R2[0], and R3[0] are inputs to MUX 0.</li><li>The two selection lines S1 and S0 determine which register is selected. For example, if S1S0 = 01, MUXes will select the data from Register 1 (R1) to be placed on the common bus.</li></ul> ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "Bus and Memory Transfers"
-            },
-            {
-                question: "Explain tri-state buffer.",
-                answer: "A tri-state buffer is a type of digital logic gate that has three possible output states: High (1), Low (0), and a High-Impedance (Hi-Z) state. The Hi-Z state behaves like an open circuit, effectively disconnecting the output from the circuit.<br><br>It has two inputs: a data input (A) and a control input (C).<br><ul class='list-disc list-inside mt-2 space-y-1'><li>When the control input is enabled (C=1), the output (Y) is equal to the data input (Y=A).</li><li>When the control input is disabled (C=0), the output enters the High-Impedance state, regardless of the data input value.</li></ul>Tri-state buffers are essential for creating bus systems where multiple devices share the same data lines. Only one device's buffer is enabled at a time to drive the bus, while all others are in the Hi-Z state. ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "Bus and Memory Transfers"
-            },
-            {
-                question: "Explain adder and subtractor circuits.",
-                answer: "<b>Full Adder:</b> A combinational circuit that performs the addition of three bits: two operand bits (A, B) and a carry-in bit (Cin). It produces two outputs: a Sum (S) and a Carry-out (Cout). It's the fundamental building block for adding binary numbers.<br><br><b>Subtractor:</b> Subtraction (A - B) can be performed by taking the 2's complement of B and adding it to A (A + 2's complement of B). A 2's complement is found by inverting all bits (1's complement) and adding 1. A full adder circuit can be converted into a subtractor by inverting the B input and setting the initial carry-in (Cin) to 1. An XOR gate is often used to control whether the operation is addition or subtraction. ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "Arithmetic Micro-operations"
-            },
-            {
-                question: "Explain & draw a 4-bit arithmetic circuit.",
-                answer: "A 4-bit arithmetic circuit can perform various arithmetic micro-operations like addition, subtraction, increment, and decrement on two 4-bit inputs (A and B). It is constructed using 4 full-adders (FAs) linked in a cascade, along with multiplexers to control the operation.<br><br><b>Components:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>Four Full Adders: Each FA computes the sum of two bits and a carry-in.</li><li>Multiplexers: Used at the 'B' input of each FA. Selection lines (S1, S0) control what value is passed to the FA (e.g., B, B', 0, or 1), thus determining the operation.</li><li>A control input (Cin) is also used, especially for subtraction (set to 1) and increment operations.</li></ul>The output is a 4-bit result (Y) and a final carry-out (Cout). ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "Arithmetic Micro-operations"
-            },
-            {
-                question: "List out applications of logic microoperations.",
-                answer: "Logic micro-operations perform bitwise operations on data stored in registers. They are fundamental for bit manipulation tasks. Applications include:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Selective Set:</b> Using the OR operation to force specific bits to 1. (e.g., `A OR 1100` sets the two most significant bits of A to 1).</li><li><b>Selective Clear:</b> Using the AND operation with a mask to force specific bits to 0. (e.g., `A AND 0011` clears the two most significant bits of A).</li><li><b>Selective Complement:</b> Using the XOR operation to invert specific bits. (e.g., `A XOR 1100` inverts the two most significant bits).</li><li><b>Masking:</b> Using the AND operation to extract specific bits from a value. (e.g., `A AND 11110000` keeps the upper nibble and clears the lower).</li><li><b>Insert:</b> Combining masking (clearing) and ORing to insert new bit values into a word.</li><li><b>Compare:</b> Using the XOR operation. If the result is all zeros, the two operands were identical.</li></ul>",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "Logic Micro-operations"
-            },
-            {
-                question: "Explain arithmetic shift and circular shift.",
-                answer: "<b>Arithmetic Shift:</b> A shift micro-operation that treats the data as a signed binary number. <br><u>Arithmetic Shift Right:</u> Shifts all bits to the right. The original most significant bit (MSB), which is the sign bit, is copied into the new MSB position to preserve the sign of the number. It's equivalent to dividing the signed number by 2.<br><u>Arithmetic Shift Left:</u> Shifts all bits to the left. A 0 is inserted into the least significant bit (LSB) position. It's equivalent to multiplying the number by 2. An overflow may occur if the sign bit changes.<br><br><b>Circular Shift (Rotate):</b> Bits are shifted, but no bits are lost. The bit shifted out from one end of the register is circulated back into the other end.<br><u>Circular Shift Right:</u> The LSB is shifted out and moved to the MSB position.<br><u>Circular Shift Left:</u> The MSB is shifted out and moved to the LSB position. ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "Shift Micro-operations"
-            },
-            {
-                question: "Draw & explain the Arithmetic Logic Shift Unit (ALSU).",
-                answer: "An Arithmetic Logic Shift Unit (ALSU or ALU) is a powerful digital combinational circuit that can perform a wide range of arithmetic, logic, and shift operations. It is a fundamental component of a computer's CPU.<br><br>It combines an arithmetic circuit, a logic circuit, and a shifter into one unit. Selection lines are used to determine which operation the ALSU will perform on the input operands (A and B). For example, a 4-bit ALSU might have selection lines S3, S2, S1, S0, and a mode input M to select from up to 32 different operations. ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "Arithmetic Logic Shift Unit"
-            },
-             {
-                question: "Explain general register organization.",
-                answer: "In a general register organization, the CPU contains a set of general-purpose registers that are not dedicated to any specific function. This provides flexibility to the programmer or compiler.<br><br><b>Characteristics:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>A control unit selects the registers for each operation.</li><li>An ALU performs the computation.</li><li>The registers are connected through a common bus system.</li><li>Instruction formats must specify not only the operation but also which registers to use. For example, an instruction like `ADD R1, R2, R3` would mean R1 ← R2 + R3.</li></ul>This organization is faster than having a single accumulator because intermediate results can be kept in registers, reducing memory access. ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "CPU Organization"
-            },
-             {
-                question: "Explain register stack & memory stack.",
-                answer: "A stack is a data structure where items are inserted and removed from the same end, known as the top of the stack (Last-In, First-Out or LIFO).<br><br><b>Register Stack:</b> A stack implemented within the CPU using a collection of registers. It is very fast due to the high speed of registers. However, its size is limited by the number of available CPU registers. A stack pointer (SP) register holds the address of the top of the stack.<br><br><b>Memory Stack:</b> A stack implemented in a portion of the main memory (RAM). The size of a memory stack is much larger and more flexible. A stack pointer (SP) register is still used, but it points to a memory location instead of a register. Operations on a memory stack are slower because they require memory access. ",
-                chapter: "1. Register Transfer & Micro-operations",
-                topic: "CPU Organization"
-            },
-            // Chapter 2
-            {
-                question: "Differentiate direct & indirect addressing modes.",
-                answer: "Addressing modes determine how the operand of an instruction is specified.<br><br><b>Direct Addressing:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>The address field of the instruction contains the actual memory address of the operand.</li><li>Only one memory access is required to fetch the operand.</li><li>It provides a limited address space, determined by the size of the address field.</li><li>Instruction: `ADD X` (X is the memory address of the operand).</li></ul><b>Indirect Addressing:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>The address field of the instruction contains the address of a memory location, which in turn holds the actual address of the operand.</li><li>Two memory accesses are required: one to get the operand's address, and a second to get the operand itself.</li><li>It provides a larger address space and more flexibility, for example, in implementing pointers.</li><li>Instruction: `ADD @X` (X is a memory location that contains the address of the operand).</li></ul> ",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Computer Instructions"
-            },
-            {
-                question: "Explain the common bus system with all CPU registers.",
-                answer: "In a basic computer, the registers in the CPU are interconnected via a common bus. This bus allows for the transfer of data between registers and between registers and memory. Key registers connected to the common bus include:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>PC (Program Counter):</b> Holds the address of the next instruction.</li><li><b>AR (Address Register):</b> Holds the memory address for read/write operations.</li><li><b>IR (Instruction Register):</b> Holds the current instruction being executed.</li><li><b>DR (Data Register):</b> Holds data read from or written to memory.</li><li><b>AC (Accumulator):</b> A general-purpose register for processing.</li><li><b>TR (Temporary Register):</b> Used for holding temporary data.</li></ul>The control unit manages the bus, ensuring that only one register outputs its data onto the bus at any given time by enabling its corresponding tri-state buffer or multiplexer selection. ",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Computer Registers"
-            },
-            {
-                question: "Explain a basic computer instruction.",
-                answer: "A computer instruction is a binary code that specifies a sequence of micro-operations for the computer to perform. It is divided into parts, typically an opcode and an address/operand.<br><br>A common format is a 16-bit instruction:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Address (Bits 0-11):</b> Specifies the address of an operand or a memory location.</li><li><b>Opcode (Bits 12-14):</b> Specifies the operation to be performed (e.g., ADD, AND, LDA).</li><li><b>Mode Bit (Bit 15):</b> Specifies the addressing mode. 0 for Direct Addressing, 1 for Indirect Addressing.</li></ul>For example, an instruction could specify loading data from a memory location into the accumulator. ",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Computer Instructions"
-            },
-            {
-                question: "Draw and explain the instruction cycle.",
-                answer: "The instruction cycle is the fundamental process by which a computer executes a single instruction. It consists of a sequence of steps:<br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Fetch:</b> The instruction is read from the memory location pointed to by the Program Counter (PC) and loaded into the Instruction Register (IR). The PC is then incremented.</li><li><b>Decode:</b> The control unit decodes the instruction in the IR to determine the operation to be performed and the addressing mode.</li><li><b>Execute:</b> The control unit generates the necessary control signals to perform the specified operation. This might involve fetching operands from memory, performing an ALU operation, and storing the result.</li></ol>After execution, the cycle repeats for the next instruction. This fetch-decode-execute sequence is the basis of computer operation. ",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Instruction Cycle"
-            },
-            {
-                question: "Explain memory reference instructions.",
-                answer: "Memory-reference instructions are instructions that require accessing memory to fetch an operand. In a basic computer, these instructions have an opcode from 000 to 110. The remaining 12 bits of the instruction are used to specify a memory address.<br><br>Examples include:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>AND:</b> Performs a bitwise AND operation between the data at the specified memory address and the value in the accumulator.</li><li><b>ADD:</b> Adds the data from the memory address to the accumulator.</li><li><b>LDA (Load Accumulator):</b> Loads the data from the memory address into the accumulator.</li><li><b>STA (Store Accumulator):</b> Stores the content of the accumulator into the specified memory address.</li><li><b>BUN (Branch Unconditionally):</b> Transfers program control to the specified memory address.</li><li><b>BSA (Branch and Save Return Address):</b> Branches to a subroutine, saving the return address.</li><li><b>ISZ (Increment and Skip if Zero):</b> Increments the word at the memory address and skips the next instruction if the result is zero.</li></ul>",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Memory-Reference Instructions"
-            },
-            {
-                question: "Explain and draw the interrupt cycle.",
-                answer: "An interrupt is a signal from a hardware device or software that indicates an event needing immediate attention. The interrupt cycle is a hardware-implemented process that handles this interruption of the normal instruction cycle.<br><br><b>Steps:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li>The CPU checks for an interrupt signal after executing each instruction.</li><li>If an interrupt is detected, the CPU saves the current state (e.g., the value of the Program Counter) to a known location, typically the stack.</li><li>The CPU then loads the PC with the address of the specific interrupt service routine (ISR) for the device that caused the interrupt.</li><li>The ISR is executed to handle the event.</li><li>After the ISR completes, the saved state (return address) is restored to the PC, and the original program resumes execution.</li></ol>This allows the CPU to handle asynchronous I/O events without constantly polling devices. ",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Input-Output and Interrupt"
-            },
-            {
-                question: "Draw and explain the timing & control unit of a basic computer.",
-                answer: "The Timing and Control unit is the 'brain' of the CPU. It generates timing signals and control signals that coordinate all operations within the computer. It ensures that micro-operations are executed in the correct sequence.<br><br><b>Components:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Instruction Register (IR):</b> Holds the opcode of the current instruction.</li><li><b>Decoder:</b> Interprets the opcode to determine which operation to perform.</li><li><b>Sequence Counter (SC):</b> A counter that produces a sequence of timing signals (T0, T1, T2, ...). These signals enable specific micro-operations at each clock pulse.</li><li><b>Control Logic Gates:</b> A combinational circuit that takes inputs from the decoder, sequence counter, and status flags, and generates the specific control signals (e.g., register read/write, ALU operation select).</li></ul>Together, these components create a hardwired control unit that directs the flow of data and execution of instructions. ",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Timing and Control"
-            },
-            {
-                question: "Explain program interrupt.",
-                answer: "A program interrupt refers to the transfer of program control from a currently running program to another service program as a result of an external or internal event. This allows the computer to respond to I/O events and errors efficiently.<br><br><b>Types of Interrupts:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>External Interrupts:</b> Caused by I/O devices, such as a keyboard press or a disk controller finishing a data transfer.</li><li><b>Internal Interrupts (Traps):</b> Caused by an error condition during program execution, like illegal opcode, division by zero, or overflow.</li><li><b>Software Interrupts:</b> Caused by executing a special instruction. They are used by programs to request services from the operating system.</li></ul>When an interrupt occurs, the processor suspends the current program, saves its state, and executes an interrupt handler (Interrupt Service Routine) to deal with the event. After handling, the original program's state is restored and it resumes execution.",
-                chapter: "2. Basic Computer Organization & Design",
-                topic: "Input-Output and Interrupt"
-            },
-            // Chapter 3
-            {
-                question: "List and explain pseudo instructions.",
-                answer: "Pseudo instructions (or assembler directives) are not actual machine instructions. They are commands for the assembler itself, used to control the assembly process, define data, and organize the program.<br><br><b>Common Pseudo Instructions:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>ORG (Origin):</b> Specifies the starting memory address for the following code or data. Example: `ORG 100H`</li><li><b>EQU (Equate):</b> Assigns a symbolic name to a constant value. Example: `COUNT EQU 10`</li><li><b>DB/DW (Define Byte/Word):</b> Allocates memory for a variable and initializes it with a value. Example: `VAR1 DB 25H`</li><li><b>END:</b> Marks the end of the source program file. The assembler will stop processing after this directive.</li></ul>",
-                chapter: "3. Programming the Basic Computer",
-                topic: "Assembly Language"
-            },
-            {
-                question: "Explain the components of assembly language.",
-                answer: "An assembly language program is a sequence of statements or lines, which can be either an instruction or a pseudo-instruction (directive). Each line is typically composed of four fields:<br><br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Label Field (Optional):</b> A symbolic name for a memory address. It is used to refer to that line from other parts of the program (e.g., for jumps or loops). It is terminated by a comma. Example: `LOOP,`</li><li><b>Instruction/Opcode Field:</b> Contains the mnemonic for a machine instruction (e.g., `ADD`, `LDA`) or a pseudo-instruction (e.g., `ORG`, `END`).</li><li><b>Operand Field:</b> Specifies the address or data that the instruction will operate on. It can be a memory address, a register, or a constant value.</li><li><b>Comment Field (Optional):</b> Begins with a specific character (like a slash or semicolon) and contains explanatory notes for the programmer. Comments are ignored by the assembler.</li></ol>Example line: `LOOP, LDA X  / Load the value from address X`",
-                chapter: "3. Programming the Basic Computer",
-                topic: "Assembly Language"
-            },
-            {
-                question: "Draw and explain the first pass of an assembler.",
-                answer: "An assembler translates assembly language code into machine code. A two-pass assembler does this in two stages. The primary purpose of the first pass is to build a symbol table.<br><br><b>Process:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li>The assembler scans the source code from beginning to end.</li><li>It maintains a Location Counter (LC), which keeps track of the memory address for each instruction. The LC is initialized with the address specified by the `ORG` directive.</li><li>For each line, the assembler checks the label field. If a label exists, the assembler adds the label's name and its corresponding memory address (the current value of the LC) to the symbol table.</li><li>The assembler increments the LC after processing each instruction.</li></ol>At the end of the first pass, the symbol table contains all the user-defined symbolic addresses and their numeric equivalents. This table is crucial for resolving addresses in the second pass. ",
-                chapter: "3. Programming the Basic Computer",
-                topic: "Assembler"
-            },
-            {
-                question: "Draw and explain the second pass of an assembler.",
-                answer: "The second pass of the assembler performs the actual translation of the source code into machine code, using the symbol table created in the first pass.<br><br><b>Process:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li>The assembler scans the source code again from the beginning.</li><li>For each instruction, it looks up the mnemonic in a machine operation table (MOT) to find its binary opcode.</li><li>It then looks up the operand's symbolic name (if any) in the symbol table to find its corresponding memory address.</li><li>The assembler combines the opcode and the address to generate the final binary machine instruction.</li><li>This process is repeated for all instructions, creating the complete object code (machine code).</li></ol>The second pass resolves all forward references (references to labels that appear later in the code) using the completed symbol table. ",
-                chapter: "3. Programming the Basic Computer",
-                topic: "Assembler"
-            },
-            // Chapter 4
-            {
-                question: "Explain micro-instruction sequencing with a diagram.",
-                answer: "In a microprogrammed control unit, the control signals are generated by reading micro-instructions from a control memory. Micro-instruction sequencing is the process of determining the address of the next micro-instruction to be executed.<br><br>A microprogram sequencer is responsible for this. It typically includes:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Control Address Register (CAR):</b> Holds the address of the current micro-instruction.</li><li><b>Next Address Generator:</b> A combinational circuit that determines the next address based on inputs like status flags and the current micro-instruction's sequencing field.</li><li><b>Sequencing Logic:</b> Can perform actions like incrementing the CAR (for sequential execution), branching to a new address based on a condition, or loading a starting address from a mapping logic unit.</li></ul>This allows for flexible control flow within the microprogram, including loops and conditional branches. ",
-                chapter: "4. Microprogrammed Control",
-                topic: "Address Sequencing"
-            },
-            {
-                question: "Explain the mapping process with an example.",
-                answer: "Mapping is the process of translating a machine instruction's opcode into a starting address in the control memory where the microprogram routine for that instruction is located. This is a key step in initiating the execution of a new instruction in a microprogrammed control unit.<br><br><b>Example:</b><br>Suppose we have a 4-bit opcode. A simple mapping method is to use the opcode directly as part of the control memory address. We can append zeros to the opcode to form the starting address.<br><ul class='list-disc list-inside mt-2 space-y-1'><li>Let the machine instruction opcode be `1011`.</li><li>A mapping function could be to add three zeros to the right, creating the 7-bit control memory address `1011000`.</li><li>The micro-routine for the instruction with opcode `1011` would start at this address in the control memory.</li></ul>This is a simple direct mapping. More complex mapping can be done using ROMs or PLAs. ",
-                chapter: "4. Microprogrammed Control",
-                topic: "Address Sequencing"
-            },
-            {
-                question: "Draw & explain micro-instruction format.",
-                answer: "A micro-instruction format defines how the bits of a micro-instruction are organized. It is divided into fields, with each field controlling a specific part of the CPU (e.g., ALU, registers).<br><br>A common format is the <b>Horizontal Micro-instruction</b>:<br><ul class='list-disc list-inside mt-2 space-y-1'><li>It has a wide format with many bits.</li><li>Each bit directly corresponds to a control signal. A '1' means the signal is active, a '0' means it is inactive.</li><li>This allows for high parallelism (many operations at once) but can lead to very large control memory.</li></ul>Another format is the <b>Vertical Micro-instruction</b>:<br><ul class='list-disc list-inside mt-2 space-y-1'><li>It is more compact. Fields are encoded, and decoders are needed to generate the actual control signals.</li><li>For example, a 3-bit field could specify one of eight ALU operations.</li><li>This reduces the size of the control memory but is less parallel and can be slower due to the decoding step.</li></ul>A typical format includes fields for ALU control, register selection, condition codes for branching, and the address of the next micro-instruction. ",
-                chapter: "4. Microprogrammed Control",
-                topic: "Micro Instruction Formats"
-            },
-            {
-                question: "Draw & explain the design of a control unit.",
-                answer: "The control unit can be designed in two main ways: Hardwired or Microprogrammed.<br><br><b>Hardwired Control Unit:</b><br>The control logic is implemented with gates, flip-flops, decoders, and other digital circuits. The logic is fixed. It is very fast but also inflexible. If the instruction set needs to be modified, the wiring and circuit have to be redesigned.<br><br><b>Microprogrammed Control Unit:</b><br>The control logic is stored in a special memory called control memory. Control signals are generated by executing a sequence of micro-instructions (a microprogram). It is more flexible than a hardwired unit because changes can be made by updating the microprogram in the control memory. However, it is slower due to the time it takes to fetch micro-instructions from memory. Its design centers around a microprogram sequencer that controls the fetching of the next micro-instruction. ",
-                chapter: "4. Microprogrammed Control",
-                topic: "Design of Control Unit"
-            }
-        ];
-
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const qaContainer = document.getElementById('qa-container');
-            const chapterFiltersContainer = document.getElementById('chapter-filters');
-            const topicFiltersContainer = document.getElementById('topic-filters');
-            const generateQuizBtn = document.getElementById('generate-quiz-btn');
-            const quizModal = document.getElementById('quiz-modal');
-            const quizModalContent = document.getElementById('quiz-modal-content');
-            const closeQuizModalBtn = document.getElementById('close-quiz-modal');
-            const loadingOverlay = document.getElementById('loading-overlay');
-
-            // --- Gemini API Configuration ---
-            const API_KEY = ""; // Kept empty as per instructions
-            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
-            
-            const showLoader = (show) => {
-                loadingOverlay.style.display = show ? 'flex' : 'none';
-            };
-
-            // Reusable Gemini API call function with exponential backoff
-            const callGeminiAPI = async (payload, retries = 3, delay = 1000) => {
-                showLoader(true);
-                try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        if (response.status === 429 && retries > 0) { // Too Many Requests
-                            await new Promise(res => setTimeout(res, delay));
-                            return callGeminiAPI(payload, retries - 1, delay * 2);
-                        }
-                        throw new Error(`API error: ${response.statusText}`);
-                    }
-                    
-                    const result = await response.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!text) throw new Error("No content received from API.");
-                    return text;
-
-                } catch (error) {
-                    console.error("Gemini API call failed:", error);
-                    return "Sorry, something went wrong while trying to generate the content.";
-                } finally {
-                    showLoader(false);
-                }
-            };
-
-            // --- UI Rendering ---
-            const chapters = ['All Chapters', ...new Set(qaData.map(item => item.chapter))];
-
-            function renderChapterFilters() {
-                chapters.forEach(chapter => {
-                    const btn = document.createElement('button');
-                    btn.textContent = chapter;
-                    btn.className = 'nav-btn px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-700 shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
-                    btn.dataset.chapter = chapter;
-                    if (chapter === 'All Chapters') btn.classList.add('active');
-                    chapterFiltersContainer.appendChild(btn);
-                });
-            }
-            
-            function renderTopicFilters(selectedChapter) {
-                topicFiltersContainer.innerHTML = '<p class="w-full text-center font-semibold text-gray-700 mb-2">Filter by Topic:</p>';
-                if (selectedChapter === 'All Chapters') {
-                    topicFiltersContainer.classList.add('opacity-0', 'h-0', 'overflow-hidden');
-                    return;
-                }
-                const topics = ['All Topics', ...new Set(qaData.filter(item => item.chapter === selectedChapter).map(item => item.topic))];
-                topics.forEach(topic => {
-                    const btn = document.createElement('button');
-                    btn.textContent = topic;
-                    btn.className = 'topic-btn nav-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-gray-600 shadow-sm hover:bg-gray-100';
-                    btn.dataset.topic = topic;
-                    if (topic === 'All Topics') btn.classList.add('active');
-                    topicFiltersContainer.appendChild(btn);
-                });
-                topicFiltersContainer.classList.remove('opacity-0', 'h-0', 'overflow-hidden');
-            }
-
-            function renderQACards(chapterFilter = 'All Chapters', topicFilter = 'All Topics') {
-                qaContainer.innerHTML = '';
-                let filteredData = getFilteredData(chapterFilter, topicFilter);
-                if (filteredData.length === 0) {
-                     qaContainer.innerHTML = `<p class="text-center text-gray-500 col-span-full">No questions found for this filter.</p>`;
-                     return;
-                }
-                filteredData.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'qa-card bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-xl transition-shadow duration-300';
-                    card.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <h2 class="text-md font-semibold text-gray-800 flex-1 pr-4">${item.question}</h2>
-                            <div class="flex flex-col items-center space-y-2">
-                               <svg class="arrow w-6 h-6 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
-                        </div>
-                        <div class="answer text-gray-600 prose prose-sm max-w-none">
-                            <div>${item.answer}</div>
-                            <div class="mt-4 pt-4 border-t border-gray-200">
-                                <button class="simplify-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-full transition-colors">
-                                    ✨ Simplify
-                                </button>
-                                <div class="simplified-answer bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-3 mt-3 rounded-r-lg" style="display: none;"></div>
-                            </div>
-                        </div>
-                    `;
-                    qaContainer.appendChild(card);
-                });
-            }
-            
-            function getFilteredData(chapterFilter, topicFilter) {
-                 let filteredData = qaData;
-                if (chapterFilter !== 'All Chapters') {
-                    filteredData = filteredData.filter(item => item.chapter === chapterFilter);
-                }
-                if (topicFilter !== 'All Topics' && chapterFilter !== 'All Chapters') {
-                    filteredData = filteredData.filter(item => item.topic === topicFilter);
-                }
-                return filteredData;
-            }
-
-            // --- Gemini Feature Handlers ---
-            async function handleSimplify(e) {
-                const simplifyBtn = e.target.closest('.simplify-btn');
-                if (!simplifyBtn) return;
-
-                const card = simplifyBtn.closest('.qa-card');
-                const answerDiv = card.querySelector('.answer > div:first-child');
-                const question = card.querySelector('h2').textContent;
-                const answer = answerDiv.textContent; // Use textContent to get clean text for the prompt
-                const simplifiedAnswerDiv = card.querySelector('.simplified-answer');
-                
-                if (simplifiedAnswerDiv.style.display === 'block') { // Toggle off
-                    simplifiedAnswerDiv.style.display = 'none';
-                    return;
-                }
-                
-                simplifiedAnswerDiv.innerHTML = 'Generating a simpler explanation...';
-                simplifiedAnswerDiv.style.display = 'block';
-
-                const prompt = `Explain the following concept from a Computer Architecture course as if you were explaining it to a 10-year-old, using a simple analogy. Keep it concise (under 100 words). Concept: "${question}" - The explanation is: "${answer}"`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
-
-                const simplifiedText = await callGeminiAPI(payload);
-                simplifiedAnswerDiv.innerHTML = simplifiedText.replace(/\n/g, '<br>');
-            }
-            
-            async function handleGenerateQuiz() {
-                const chapterFilter = document.querySelector('#chapter-filters .nav-btn.active').dataset.chapter;
-                const topicFilter = document.querySelector('#topic-filters .topic-btn.active')?.dataset.topic || 'All Topics';
-                const filteredData = getFilteredData(chapterFilter, topicFilter);
-
-                if (filteredData.length === 0) {
-                    alert("Please select a chapter with questions to generate a quiz.");
-                    return;
-                }
-
-                quizModalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4">✨ Generating Your Quiz...</h2><p>Please wait while we prepare some questions for you.</p>`;
-                quizModal.style.display = 'flex';
-
-                const context = filteredData.map(item => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
-                const prompt = `You are a Computer Architecture professor. Based on the following questions and answers, create a 5-question multiple-choice quiz with 4 options for each. Ensure the correct answer is one of the options. Here is the content:\n\n${context}`;
-                
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "ARRAY",
-                            items: {
-                                type: "OBJECT",
-                                properties: {
-                                    "question": { "type": "STRING" },
-                                    "options": { "type": "ARRAY", "items": { "type": "STRING" } },
-                                    "answer": { "type": "STRING" }
-                                },
-                                required: ["question", "options", "answer"]
-                            }
-                        }
-                    }
-                };
-                
-                const quizJsonText = await callGeminiAPI(payload);
-                try {
-                    const quizData = JSON.parse(quizJsonText);
-                    renderQuiz(quizData);
-                } catch (e) {
-                    quizModalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-red-600">Error</h2><p>Sorry, we couldn't generate the quiz. The AI returned an unexpected format. Please try again.</p>`;
-                    console.error("Failed to parse quiz JSON:", e);
-                }
-            }
-
-            function renderQuiz(quizData) {
-                let quizHtml = `<h2 class="text-2xl font-bold mb-4">Practice Quiz</h2>`;
-                quizData.forEach((item, index) => {
-                    quizHtml += `
-                        <div class="mb-6 quiz-item">
-                            <p class="font-semibold mb-2">${index + 1}. ${item.question}</p>
-                            <div class="space-y-2 options-container">
-                                ${item.options.map(option => `
-                                    <label class="flex items-center p-2 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
-                                        <input type="radio" name="q${index}" value="${option}" class="mr-3">
-                                        <span>${option}</span>
-                                    </label>
-                                `).join('')}
-                            </div>
-                            <p class="correct-answer text-green-600 font-bold mt-2" style="display:none;">Correct Answer: ${item.answer}</p>
-                        </div>
-                    `;
-                });
-                quizHtml += `<button id="show-answers-btn" class="w-full mt-4 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-colors">Show Answers</button>`;
-                quizModalContent.innerHTML = quizHtml;
-            }
-
-            // --- Event Listeners ---
-            chapterFiltersContainer.addEventListener('click', (e) => {
-                if (e.target.tagName !== 'BUTTON') return;
-                document.querySelectorAll('#chapter-filters .nav-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                const selectedChapter = e.target.dataset.chapter;
-                renderTopicFilters(selectedChapter);
-                renderQACards(selectedChapter);
-            });
-            
-            topicFiltersContainer.addEventListener('click', (e) => {
-                if (e.target.tagName !== 'BUTTON') return;
-                document.querySelectorAll('#topic-filters .topic-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                const selectedChapter = document.querySelector('#chapter-filters .nav-btn.active').dataset.chapter;
-                const selectedTopic = e.target.dataset.topic;
-                renderQACards(selectedChapter, selectedTopic);
-            });
-
-            qaContainer.addEventListener('click', (e) => {
-                const card = e.target.closest('.qa-card');
-                if (card && !e.target.closest('.simplify-btn')) {
-                    card.classList.toggle('active');
-                }
-                handleSimplify(e);
-            });
-            
-            generateQuizBtn.addEventListener('click', handleGenerateQuiz);
-            closeQuizModalBtn.addEventListener('click', () => quizModal.style.display = 'none');
-            quizModal.addEventListener('click', (e) => {
-                if (e.target === quizModal) quizModal.style.display = 'none';
-            });
-            quizModalContent.addEventListener('click', (e) => {
-                if (e.target.id === 'show-answers-btn') {
-                    document.querySelectorAll('.correct-answer').forEach(el => el.style.display = 'block');
-                    e.target.disabled = true;
-                    e.target.textContent = 'Answers Revealed';
-                    e.target.classList.add('bg-gray-400', 'cursor-not-allowed');
-                }
-            });
-
-            // --- Initial Render ---
-            renderChapterFilters();
-            renderQACards();
-        });
-    </script>
-</body>
-</html>
-
+[
+    {
+        "question": "Implement common bus system with 4 registers of four bits using multiplexers.",
+        "answer": "A common bus system provides a shared communication pathway for transferring data between multiple registers, eliminating the need for complex point-to-point wiring. For 4 registers, each with 4 bits, the most efficient way to implement this is by using four 4x1 multiplexers (MUX).<br><br><b>Components:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>4 Registers (R0, R1, R2, R3):</b> Each register stores 4 bits of data.</li><li><b>Four 4x1 Multiplexers:</b> One MUX is used for each bit of the bus. For example, MUX0 handles the 0th bit from all registers, MUX1 handles the 1st bit, and so on.</li><li><b>Two Selection Lines (S1, S0):</b> These control lines are connected in parallel to all four multiplexers. They determine which register is selected to place its data onto the bus.</li></ul><b>Implementation:</b><br>The i-th bit from all four registers is connected to the inputs of the i-th MUX. For example, the four inputs of MUX0 are R0[0], R1[0], R2[0], and R3[0]. The output of MUX0 becomes the 0th bit of the common bus. The same logic applies to MUX1, MUX2, and MUX3.<br><img src='https://placehold.co/600x400?text=4-bit+Common+Bus+using+MUXes' alt='Diagram of a 4-bit common bus system using four 4x1 multiplexers'><br><b>Working:</b><br>The value of the selection lines S1 and S0 determines which register's data is passed through the multiplexers to the bus. <br><ul><li>If S1S0 = 00, Register 0 is selected.</li><li>If S1S0 = 01, Register 1 is selected.</li><li>If S1S0 = 10, Register 2 is selected.</li><li>If S1S0 = 11, Register 3 is selected.</li></ul>For instance, if the control unit sets S1S0 to '10', all four MUXes will select their 2nd input line, which corresponds to the data bits from Register 2 (R2[3], R2[2], R2[1], R2[0]). This 4-bit data is then placed onto the common bus.",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "Bus and Memory Transfers"
+    },
+    {
+        "question": "Explain tri-state buffer.",
+        "answer": "A tri-state buffer, also known as a three-state buffer, is a digital logic gate that has three possible output states: High (1), Low (0), and a High-Impedance (Hi-Z) state. This third state is crucial for connecting multiple devices to a shared bus.<br><br><b>Structure and Operation:</b><br>A tri-state buffer has two inputs: a data input (A) and a control or enable input (C).<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Enabled State (C=1):</b> When the control input is active (high), the buffer acts like a normal buffer. The output (Y) is equal to the data input (Y=A). It will output either a logical High (1) or Low (0).</li><li><b>Disabled State (C=0):</b> When the control input is inactive (low), the output enters the High-Impedance (Hi-Z) state. In this state, the output is effectively disconnected from the circuit, as if a switch is opened. It neither drives the output high nor low.</li></ul><img src='https://placehold.co/500x300?text=Tri-State+Buffer+Logic+Symbol+and+Truth+Table' alt='Logic symbol and truth table for a tri-state buffer'><br><b>Application in Bus Systems:</b><br>Tri-state buffers are fundamental for creating bus systems. A bus is a common set of wires shared by multiple components. If multiple devices were to output data on the bus simultaneously, it would cause a conflict (bus contention). By using tri-state buffers, we can ensure that only one device drives the bus at any given time.<br><br>Each device connected to the bus has its output connected through a tri-state buffer. A control unit ensures that only one device's buffer is enabled at a time. The buffers of all other devices are kept in the high-impedance state, effectively making them electrically invisible to the bus.",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "Bus and Memory Transfers"
+    },
+    {
+        "question": "Explain adder and subtractor circuits.",
+        "answer": "<b>Adder Circuits:</b><br>An adder is a digital circuit that performs the addition of numbers. The fundamental building block is the Full Adder.<br><u>Full Adder:</u> A combinational circuit that adds three input bits: two operand bits (A, B) and a carry-in bit (Cin) from the previous stage. It produces two outputs: a Sum (S) and a Carry-out (Cout).<br><u>4-bit Ripple-Carry Adder:</u> To add multi-bit numbers, Full Adders are cascaded. A 4-bit adder is built by connecting four Full Adders. The Cout of one FA becomes the Cin of the next FA in the chain. The inputs are two 4-bit numbers (A3A2A1A0 and B3B2B1B0) and an initial carry-in (C0). The output is a 4-bit sum (S3S2S1S0) and a final carry-out (C4).<br><img src='https://placehold.co/600x300?text=4-bit+Ripple-Carry+Adder' alt='Diagram of a 4-bit ripple-carry adder built from full adders'><br><b>Subtractor Circuit:</b><br>Binary subtraction (A - B) is typically performed by using the 2's complement method. The operation becomes A + (2's complement of B). The 2's complement of B is found by inverting all its bits (1's complement) and then adding 1.<br><br><u>Adder-Subtractor Circuit:</u> A single 4-bit adder can be modified to perform both addition and subtraction. This is achieved by adding XOR gates at the 'B' inputs of each Full Adder and a control line (M).<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>For Addition (M=0):</b> Each XOR gate receives M=0, so B XOR 0 = B. The 'B' inputs pass to the Full Adders unchanged. The initial carry-in (C0) is set to 0. The circuit performs A + B.</li><li><b>For Subtraction (M=1):</b> Each XOR gate receives M=1, so B XOR 1 = B' (inverted B). This provides the 1's complement of B. The initial carry-in (C0) is also set to 1. The circuit performs A + B' + 1, which is equivalent to A - B.</li></ul>This design creates a versatile arithmetic unit controlled by a single mode selection line.",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "Arithmetic Micro-operations"
+    },
+    {
+        "question": "Explain & draw a 4-bit arithmetic circuit.",
+        "answer": "A 4-bit arithmetic circuit is a versatile combinational circuit that can perform a variety of arithmetic micro-operations on two 4-bit inputs (A and B). It is a core component of an Arithmetic Logic Unit (ALU).<br><br><b>Components:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Four Full Adders (FAs):</b> Connected in cascade to perform the core binary addition on the 4-bit inputs.</li><li><b>Four 4x1 Multiplexers (MUXes):</b> One MUX is placed at the 'B' input of each Full Adder. These MUXes are the key to selecting the desired operation.</li><li><b>Selection Lines (S1, S0):</b> These two lines control all four MUXes simultaneously, determining which modification of operand B is sent to the adders.</li><li><b>Carry-In (Cin):</b> The initial carry-in to the first Full Adder also acts as a control input for certain operations like subtraction and increment.</li></ul><b>Circuit Diagram and Working:</b><br><img src='https://placehold.co/600x500?text=4-bit+Arithmetic+Circuit+Diagram' alt='Detailed diagram of a 4-bit arithmetic circuit'><br>The selection lines S1 and S0 and the carry-in Cin determine the function of the circuit. The MUXes at each stage select one of four inputs: 0, 1, B, or B'. By combining these selections with the Cin, various operations can be achieved.<br><br><b>Function Table Example:</b><br><table class='w-full text-left border-collapse mt-2'><thead><tr><th class='border p-2'>S1</th><th class='border p-2'>S0</th><th class='border p-2'>Cin</th><th class='border p-2'>Output Y</th><th class='border p-2'>Operation</th></tr></thead><tbody><tr><td class='border p-2'>0</td><td class='border p-2'>0</td><td class='border p-2'>0</td><td class='border p-2'>A</td><td class='border p-2'>Transfer A</td></tr><tr><td class='border p-2'>0</td><td class='border p-2'>0</td><td class='border p-2'>1</td><td class='border p-2'>A + 1</td><td class='border p-2'>Increment A</td></tr><tr><td class='border p-2'>0</td><td class='border p-2'>1</td><td class='border p-2'>0</td><td class='border p-2'>A + B</td><td class='border p-2'>Addition</td></tr><tr><td class='border p-2'>1</td><td class='border p-2'>0</td><td class='border p-2'>1</td><td class='border p-2'>A + B' + 1</td><td class='border p-2'>Subtraction (A - B)</td></tr><tr><td class='border p-2'>1</td><td class='border p-2'>1</td><td class='border p-2'>1</td><td class='border p-2'>A - 1</td><td class='border p-2'>Decrement A</td></tr></tbody></table>This design allows a single circuit to perform multiple useful arithmetic functions by simply changing the control signals.",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "Arithmetic Micro-operations"
+    },
+    {
+        "question": "List out applications of logic microoperations.",
+        "answer": "Logic micro-operations perform bitwise operations (like AND, OR, XOR, NOT) on the individual bits of data stored in registers. They are essential for manipulating data at the bit level, rather than treating it as a numerical value.<br><br><b>Key Applications:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Selective Set:</b> This operation forces specific bits of a register to 1, while leaving other bits unchanged. This is achieved using the <b>OR</b> operation. A mask is created with 1s in the positions to be set and 0s elsewhere.<br><u>Example:</u> To set the upper two bits of `1001`, we use the mask `1100`. `1001 OR 1100 = 1101`.</li><br><li><b>Selective Clear:</b> This operation forces specific bits to 0, leaving others unchanged. This is achieved using the <b>AND</b> operation with a mask that has 0s in the positions to be cleared and 1s elsewhere.<br><u>Example:</u> To clear the upper two bits of `1101`, we use the mask `0011`. `1101 AND 0011 = 0001`.</li><br><li><b>Selective Complement:</b> This operation inverts or flips the value of specific bits. This is achieved using the <b>XOR</b> operation. The mask has 1s in the bit positions to be complemented and 0s elsewhere.<br><u>Example:</u> To complement the upper two bits of `1001`, we use `1100`. `1001 XOR 1100 = 0101`.</li><br><li><b>Masking:</b> This is a general term for an operation that extracts a specific group of bits from a word, typically by clearing all other bits. The <b>AND</b> operation is used for this purpose.<br><u>Example:</u> To extract the lower nibble (4 bits) of an 8-bit byte `11011010`, we use the mask `00001111`. `11011010 AND 00001111 = 00001010`.</li><br><li><b>Insert:</b> This operation inserts a new value into a specific part of a word. It's a two-step process: first, mask (clear) the bit positions where the new value will go, and then use the <b>OR</b> operation to merge the new value in.<br><u>Example:</u> To insert `1010` into the upper half of `00001111`, first clear the upper half: `00001111 AND 00001111 = 00001111`. Then OR with the value to be inserted: `00001111 OR 10100000 = 10101111`.</li><br><li><b>Compare:</b> The <b>XOR</b> operation can be used to compare two registers. If `A XOR B` results in all zeros, it means that A and B are identical.</li></ul>",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "Logic Micro-operations"
+    },
+    {
+        "question": "Explain arithmetic shift and circular shift.",
+        "answer": "Shift micro-operations are used for serial data transfer and are also employed in conjunction with arithmetic and logic operations.<br><br><b>Arithmetic Shift:</b><br>This type of shift treats the data as a signed binary number (usually in 2's complement form). It is designed to preserve the sign of the number during the shift.<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Arithmetic Shift Right (ASHR):</b> All bits are shifted one position to the right. The Most Significant Bit (MSB), which is the sign bit, is copied into the new MSB position as well as being shifted. This process is called sign extension. The Least Significant Bit (LSB) is discarded. ASHR is equivalent to integer division by 2 for a signed number.<br><u>Example:</u> `10110` (-10) shifted right becomes `11011` (-5). The sign bit '1' is preserved.</li><li><b>Arithmetic Shift Left (ASHL):</b> All bits are shifted one position to the left. A 0 is inserted into the LSB position, and the MSB is discarded. ASHL is equivalent to multiplication by 2. An overflow can occur if the sign bit changes its value after the shift.</li><u>Example:</u> `00110` (+6) shifted left becomes `01100` (+12).</ul><br><b>Circular Shift (Rotate):</b><br>In a circular shift, no bits are lost. The bit that is shifted out from one end of the register is circulated back into the other end.<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Circular Shift Right (Rotate Right):</b> All bits are shifted one position to the right. The LSB that is shifted out is copied back into the MSB position.<br><u>Example:</u> `10110` rotated right becomes `01011`.</li><li><b>Circular Shift Left (Rotate Left):</b> All bits are shifted one position to the left. The MSB that is shifted out is copied back into the LSB position.<br><u>Example:</u> `10110` rotated left becomes `01101`.</li></ul>There is also a variation called 'rotate through carry', where the carry flag acts as an intermediary bit in the rotation, which is useful in multi-word shift operations.",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "Shift Micro-operations"
+    },
+    {
+        "question": "Draw & explain the Arithmetic Logic Shift Unit (ALSU).",
+        "answer": "An Arithmetic Logic Shift Unit (ALSU), commonly known as an ALU, is a fundamental digital combinational circuit within a computer's Central Processing Unit (CPU). It is a highly versatile component capable of performing a wide range of arithmetic operations (like addition, subtraction, increment), logic operations (like AND, OR, XOR), and shift operations (like logical, arithmetic, and circular shifts) on input operands.<br><br><b>Block Diagram & Components:</b><br>An ALSU can be visualized as a single functional block that combines three main sub-units:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Arithmetic Unit:</b> Contains circuits like full adders to perform arithmetic calculations.</li><li><b>Logic Unit:</b> Contains circuits to perform bitwise logical operations.</li><li><b>Shifter Unit:</b> Contains circuits to perform various shift operations.</li></ul>The ALSU takes two n-bit data operands (A and B) as input and produces an n-bit result (Y) as output. Its operation is governed by a set of selection lines.<br><br><b>Control and Operation:</b><br>The specific function the ALSU performs at any given time is determined by control signals, typically a set of selection lines (e.g., S3, S2, S1, S0) and a mode input (M).<br><ul><li>The selection lines choose the specific micro-operation to be performed within a given mode. For example, S1S0 might select one of four arithmetic operations.</li><li>The mode input (M) selects the type of operation. For example, M=0 could select an arithmetic operation, while M=1 could select a logic operation.</li></ul>By setting the values of these control lines, the control unit can command the ALSU to perform any of its built-in functions. In addition to the result, the ALSU also outputs a set of status flags (e.g., Carry, Zero, Negative, Overflow) that provide information about the outcome of the operation.",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "Arithmetic Logic Shift Unit"
+    },
+    {
+        "question": "Explain general register organization.",
+        "answer": "In a general register organization, the CPU's internal storage consists of a set of general-purpose registers rather than a single dedicated accumulator. This architecture offers significant performance advantages by reducing memory traffic.<br><br><b>Architecture:</b><br>The core of this organization is a set of registers (e.g., R0 to R7) connected to a common Arithmetic Logic Unit (ALU). The flow of data is managed by buses and multiplexers.<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Register File:</b> A collection of general-purpose registers.</li><li><b>ALU:</b> Performs arithmetic and logic operations on data supplied from the registers.</li><li><b>Multiplexers (MUX):</b> Two multiplexers (e.g., MUX A and MUX B) are used to select which two registers will provide their data as inputs to the ALU.</li><li><b>Decoder:</b> A decoder selects the destination register where the result from the ALU will be stored.</li></ul><b>Control Word:</b><br>The operations are controlled by a control word, which is a binary code that specifies the entire micro-operation. The control word is divided into fields:<br><ul><li><b>SELA (Select A):</b> A 3-bit field to select one of 8 registers for the A input of the ALU.</li><li><b>SELB (Select B):</b> A 3-bit field to select one of 8 registers for the B input of the ALU.</li><li><b>SELD (Select Destination):</b> A 3-bit field to select the destination register for the result.</li><li><b>OPR (Operation):</b> A field that specifies the operation to be performed by the ALU (e.g., ADD, SUB, AND).</li></ul>For example, to execute the instruction `ADD R1, R2, R3` (R1 ← R2 + R3), the control word would set SELA=R2, SELB=R3, SELD=R1, and OPR=ADD.<br><br><b>Advantages:</b><br>This organization is much faster than accumulator-based designs because it minimizes access to main memory. Intermediate results can be kept in high-speed registers, improving program execution speed and efficiency. It provides greater flexibility to the compiler for optimizing code.",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "CPU Organization"
+    },
+    {
+        "question": "Explain register stack & memory stack.",
+        "answer": "A stack is a fundamental data structure that stores information in a Last-In, First-Out (LIFO) manner. Items can only be added (pushed) or removed (popped) from one end, called the 'top' of the stack. A Stack Pointer (SP) is a register that always points to the top item.<br><br><b>Register Stack:</b><br>A register stack is implemented within the CPU using a finite collection of general-purpose registers. <br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Implementation:</b> A set of CPU registers is designated to function as the stack. The Stack Pointer (SP) holds the address of the register that is currently at the top.</li><li><b>Advantages:</b> It is extremely fast because all operations occur within the CPU at register speed, with no memory access required.</li><li><b>Disadvantages:</b> The size of the stack is very limited, as it depends on the number of available registers in the CPU. This makes it unsuitable for handling deep nested calls or large data sets. It is also not directly accessible by user programs.</li></ul><b>Memory Stack:</b><br>A memory stack is implemented in a portion of the main computer memory (RAM).<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Implementation:</b> A region of RAM is reserved for the stack. The Stack Pointer (SP) register holds the memory address of the top of the stack. PUSH and POP operations involve memory read/write cycles. For a PUSH operation, the SP is decremented (or incremented, depending on stack growth direction) and the data is written to the memory location pointed to by SP. For a POP, data is read from the location pointed to by SP, and the SP is incremented.</li><li><b>Advantages:</b> The size of the stack is much larger and more flexible, limited only by the available RAM.</li><li><b>Disadvantages:</b> Operations are significantly slower compared to a register stack because they involve accessing main memory, which has a much higher latency than CPU registers.</li></ul>",
+        "chapter": "1. Register Transfer & Micro-operations",
+        "topic": "CPU Organization"
+    },
+    {
+        "question": "Differentiate direct & indirect addressing modes.",
+        "answer": "Addressing modes define how the effective address of an operand is determined within a computer instruction. Direct and Indirect are two fundamental modes.<br><br><b>Direct Addressing:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Definition:</b> In direct addressing, the address field of the instruction contains the actual memory address (the effective address) where the operand is located.</li><li><b>Process:</b> The CPU reads the instruction, extracts the address part, and directly uses that address to fetch the operand from main memory.</li><li><b>Memory Accesses:</b> It requires only one memory access to fetch the operand (after the instruction fetch itself).</li><li><b>Address Space:</b> The address space is limited by the number of bits available in the address field of the instruction. For example, a 12-bit address field can only address 2^12 = 4096 memory locations.</li><li><b>Example:</b> `ADD 1000H`. This instruction adds the value stored at memory location 1000H to the accumulator. The effective address is 1000H.</li></ul><b>Indirect Addressing:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Definition:</b> In indirect addressing, the address field of the instruction contains the address of a memory location, which in turn holds the effective address of the operand. It's a pointer-based approach.</li><li><b>Process:</b> The CPU reads the instruction and fetches the address part. It then performs a memory access to that address to get the *actual* address of the operand. Finally, it performs a second memory access using this new address to fetch the operand.</li><li><b>Memory Accesses:</b> It requires two memory accesses to fetch the operand, making it slower than direct addressing.</li><li><b>Address Space:</b> It provides a much larger address space. The address field only needs to point to a memory location, and that memory location can be a full-word address (e.g., 32 or 64 bits), allowing access to the entire memory space. It is essential for implementing pointers.</li><li><b>Example:</b> `ADD @1000H`. This instruction goes to memory location 1000H. Suppose location 1000H contains the value 2500H. The CPU will then go to location 2500H to fetch the actual operand and add it to the accumulator. The effective address is 2500H.</li></ul>",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Computer Instructions"
+    },
+    {
+        "question": "Explain the common bus system with all CPU registers.",
+        "answer": "In a basic computer architecture, a common bus system is used as a shared pathway to connect the main CPU registers with memory and the ALU. This design simplifies the internal connections and control logic.<br><br><b>Key Registers Connected to the Bus:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>PC (Program Counter):</b> Holds the memory address of the next instruction to be fetched.</li><li><b>AR (Address Register):</b> Holds the address for a memory read or write operation. It is the only register that sends an address to the main memory.</li><li><b>IR (Instruction Register):</b> Holds the instruction code that has been fetched from memory and is currently being executed.</li><li><b>DR (Data Register):</b> Acts as a buffer to hold data being transferred between the CPU and memory. It's also known as the Memory Buffer Register (MBR).</li><li><b>AC (Accumulator):</b> A general-purpose register used to hold operands for the ALU and to store the results of ALU operations.</li><li><b>TR (Temporary Register):</b> Used by the control unit to store temporary data during instruction execution.</li><li><b>INPR (Input Register):</b> Holds input character data from an external device.</li><li><b>OUTR (Output Register):</b> Holds output character data for an external device.</li></ul><b>Operation:</b><br>The common bus is a set of parallel wires (e.g., 16 wires for a 16-bit system). At any given time, only one register can place its data onto the bus. This is controlled by selection signals (S2, S1, S0) that enable the output of a specific register. The data on the bus can then be loaded into another register by activating its 'load' (LD) control input at the appropriate clock edge. The control unit is responsible for generating the sequence of selection and load signals to execute the micro-operations for an instruction.",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Computer Registers"
+    },
+    {
+        "question": "Explain a basic computer instruction.",
+        "answer": "A computer instruction is a binary command that tells the CPU to perform a specific operation. It is the fundamental unit of work in a computer. An instruction is typically composed of several fields that define the operation and the data it will act upon.<br><br><b>Instruction Format:</b><br>A common format for a basic computer is a 16-bit instruction, which can be broken down as follows:<br><br><b>Memory-Reference Instruction Format (Opcode 000-110):</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Opcode (Bits 12-14):</b> This 3-bit field specifies the operation to be performed, such as ADD, LDA (Load Accumulator), or STA (Store Accumulator). It can define 2^3 = 8 distinct operations.</li><li><b>Address (Bits 0-11):</b> This 12-bit field specifies the memory address of the operand.</li><li><b>Addressing Mode Bit (I) (Bit 15):</b> This bit determines how the address field is interpreted. If I=0, it's a <b>Direct Address</b>. If I=1, it's an <b>Indirect Address</b>.</li></ul><b>Register-Reference/IO Instruction Format (Opcode 111):</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>When the opcode is 111, the remaining 12 bits (0-11) are used to specify a register or I/O operation.</li><li>If bit 15 (I) is 0, it is a <b>Register-Reference Instruction</b> (e.g., clear accumulator, complement accumulator).</li><li>If bit 15 (I) is 1, it is an <b>Input-Output Instruction</b> (e.g., read from input device, write to output device).</li></ul>This structured format allows the control unit to decode the instruction efficiently and generate the necessary sequence of micro-operations to execute it.",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Computer Instructions"
+    },
+    {
+        "question": "Draw and explain the instruction cycle.",
+        "answer": "The instruction cycle is the fundamental sequence of steps that a CPU's control unit performs to execute a single machine instruction. This cycle is continuously repeated as long as the computer is running. It primarily consists of four phases: Fetch, Decode, Read Effective Address, and Execute.<br><br><b>Phases of the Instruction Cycle:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Fetch:</b> The CPU fetches the instruction from the memory location specified by the Program Counter (PC).<br><u>Micro-operations:</u><br> T0: AR ← PC (Copy PC content to Address Register)<br> T1: IR ← M[AR], PC ← PC + 1 (Load instruction from memory to Instruction Register, and increment PC).</li><br><li><b>Decode:</b> The control unit decodes the instruction in the Instruction Register (IR). It identifies the operation to be performed (opcode) and the addressing mode (I bit).<br><u>Micro-operations:</u><br> T2: D0..D7 ← Decode IR(12-14), AR ← IR(0-11), I ← IR(15)</li><br><li><b>Read Effective Address (if indirect):</b> If the instruction uses indirect addressing (I=1), the CPU must perform an extra memory fetch to get the actual address of the operand.<br><u>Micro-operations:</u><br> T3: AR ← M[AR] (Fetch the effective address from memory).</li><br><li><b>Execute:</b> The control unit generates the sequence of control signals that causes the CPU to perform the specified operation. This phase varies greatly depending on the instruction. It could be a memory-reference, register-reference, or I/O instruction.<br><u>Example (ADD instruction):</u><br> T4: DR ← M[AR] (Read operand from memory into Data Register)<br> T5: AC ← AC + DR, SC ← 0 (Add operand to Accumulator and reset sequence counter to start a new cycle).</li></ol>After the Execute phase is completed, the cycle returns to the Fetch phase to process the next instruction, unless a HALT instruction is encountered. The flow can also be altered by interrupts.",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Instruction Cycle"
+    },
+    {
+        "question": "Explain memory reference instructions.",
+        "answer": "Memory-reference instructions are a category of computer instructions that require access to main memory to fetch an operand. In the basic computer architecture, these instructions are identified by an opcode in the range of 000 to 110.<br><br>The format of these instructions typically includes an opcode, a memory address, and an addressing mode bit. The CPU uses the address part to locate the data in memory that it needs to operate on.<br><br><b>Common Memory-Reference Instructions:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>AND (Opcode: 000/1000):</b> Performs a bitwise AND operation between the content of the accumulator (AC) and the operand fetched from the specified memory address. The result is stored back in the AC. `AC ← AC AND M[AR]`</li><li><b>ADD (Opcode: 001/1001):</b> Adds the operand from the memory address to the value in the AC and stores the sum in the AC. `AC ← AC + M[AR]`</li><li><b>LDA (Load Accumulator) (Opcode: 010/1010):</b> Loads (copies) the operand from the memory address into the AC, overwriting its previous content. `AC ← M[AR]`</li><li><b>STA (Store Accumulator) (Opcode: 011/1011):</b> Stores (copies) the content of the AC into the specified memory location. The content of the AC remains unchanged. `M[AR] ← AC`</li><li><b>BUN (Branch Unconditionally) (Opcode: 100/1100):</b> An unconditional jump instruction. It loads the specified memory address into the Program Counter (PC), causing the program to continue execution from that new address. `PC ← AR`</li><li><b>BSA (Branch and Save Return Address) (Opcode: 101/1101):</b> Used for subroutine calls. It stores the current value of the PC (the return address) at the specified memory address and then branches to the next address. `M[AR] ← PC, PC ← AR + 1`</li><li><b>ISZ (Increment and Skip if Zero) (Opcode: 110/1110):</b> Increments the operand at the specified memory address. If the result of the increment is zero, the next instruction in sequence is skipped. This is useful for creating loops. `M[AR] ← M[AR] + 1`, if `M[AR]+1 == 0` then `PC ← PC + 1`</li></ul>",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Memory-Reference Instructions"
+    },
+    {
+        "question": "Explain and draw the interrupt cycle.",
+        "answer": "An interrupt is a mechanism by which a hardware or software event can temporarily halt the normal execution of a program and transfer control to a special service routine. The interrupt cycle is a hardware-implemented process added to the instruction cycle to handle these events.<br><br><b>Process:</b><br>After the execute phase of each instruction, the CPU checks an interrupt enable flag (IEN) and an interrupt request flag (R). If both are set (IEN=1 and R=1), the CPU initiates the interrupt cycle instead of the next fetch cycle.<br><br><b>Micro-operations of the Interrupt Cycle:</b><br>The interrupt cycle performs a sequence of crucial micro-operations to ensure the current program state is saved before servicing the interrupt.<br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Save Return Address:</b> The current content of the Program Counter (PC), which holds the address of the next instruction of the interrupted program, must be saved. It is typically stored in a specific memory location (e.g., location 0). The address register (AR) is cleared and the PC content is stored in the temporary register (TR).<br><u>T0:</u> TR ← PC</li><br><li><b>Store PC in Memory:</b> The return address from TR is stored in memory location 0.<br><u>T1:</u> M[AR] ← TR</li><br><li><b>Branch to ISR:</b> The PC is loaded with the address of the Interrupt Service Routine (ISR), which is typically a fixed location (e.g., location 1). The interrupt flags are also cleared to prevent another interrupt from occurring while the current one is being processed.<br><u>T2:</u> PC ← 0, IEN ← 0, R ← 0, SC ← 0</li></ol>After these steps, the CPU fetches the first instruction of the ISR (from address 1) and begins executing it. The ISR handles the event. The last instruction of the ISR is typically a branch back to the return address stored at memory location 0, allowing the original program to resume execution.",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Input-Output and Interrupt"
+    },
+    {
+        "question": "Draw and explain the timing & control unit of a basic computer.",
+        "answer": "The Timing and Control unit is the nerve center of the CPU. It is a sequential circuit that generates the timing signals and control signals required to coordinate and synchronize all operations within the computer. It directs the flow of data between registers, the ALU, and memory, ensuring that instructions are fetched, decoded, and executed in the correct sequence.<br><br><b>Components of a Hardwired Control Unit:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Instruction Register (IR):</b> Holds the opcode and address parts of the current instruction. The bits from the IR are direct inputs to the control logic.</li><li><b>Instruction Decoder:</b> A combinational circuit that interprets the opcode from the IR (e.g., bits 12-14) and generates output signals (D0 to D7) indicating which operation is to be performed.</li><li><b>Sequence Counter (SC):</b> A counter (e.g., a 4-bit counter) that produces a sequence of timing signals (T0, T1, T2, ...). At each clock pulse, the SC advances to the next state, enabling a different set of micro-operations. It can be cleared (CLR) or incremented (INR).</li><li><b>Control Logic Gates:</b> A complex network of combinational logic gates (AND, OR, NOT) that takes inputs from the instruction decoder, the timing signals from the SC, and status flags (like the I bit from IR). It generates the specific control signals that operate the rest of the CPU, such as register load signals (LD), clear signals (CLR), increment signals (INR), and memory read/write signals.</li></ul><b>Operation:</b><br>The control unit's operation is a synchronized dance of these components. For example, to generate the control signal for the micro-operation `T1: IR ← M[AR]`, the control logic would combine the timing signal T1 with a signal from the decoder indicating a fetch phase. The resulting signal would enable the 'load' input of the IR and the 'read' signal for the memory, all at the precise moment of the T1 clock pulse.",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Timing and Control"
+    },
+    {
+        "question": "Explain program interrupt.",
+        "answer": "A program interrupt is a mechanism that diverts the processor from its current task to handle a more urgent event, such as a request from an I/O device. It provides an efficient way to handle asynchronous events without forcing the CPU to waste time continuously checking the status of devices (a process known as polling).<br><br>When an interrupt occurs, the processor suspends the execution of the current program, saves the essential context (at a minimum, the program counter), and transfers control to a special program called an Interrupt Service Routine (ISR) or interrupt handler.<br><br><b>Types of Interrupts:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>External Interrupts:</b> These are generated by external hardware devices. They signal that the device needs attention from the processor. Common examples include:<br>  - An I/O device (like a keyboard or printer) signaling the completion of an operation or the availability of new data.<br>  - A timer signaling that a specific time interval has elapsed.<br>  - A power failure warning.</li><br><li><b>Internal Interrupts (Traps):</b> These are generated internally by the processor as a result of an error or exceptional condition occurring during program execution. They are synchronous with the program. Examples include:<br>  - Arithmetic errors like division by zero or overflow.<br>  - Attempting to execute an illegal or undefined instruction.<br>  - Accessing a protected or invalid memory location (page fault).</li><br><li><b>Software Interrupts:</b> These are generated deliberately by a program executing a special instruction. They are typically used to request services from the operating system kernel, acting as a controlled entry point into the OS. This is the primary mechanism for system calls.</li></ul>The interrupt mechanism is crucial for modern computing, enabling multitasking, efficient I/O handling, and robust error management.",
+        "chapter": "2. Basic Computer Organization & Design",
+        "topic": "Input-Output and Interrupt"
+    },
+    {
+        "question": "List and explain pseudo instructions.",
+        "answer": "Pseudo instructions, also known as assembler directives, are special commands in an assembly language program that are not translated into machine code instructions. Instead, they provide instructions to the assembler itself, guiding how it should process the code, allocate memory, and format the final object file.<br><br><b>Common and Important Pseudo Instructions:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>ORG (Origin):</b> This directive sets the starting memory address for the code or data that follows it. It tells the assembler where to place the subsequent instructions in memory. It initializes the assembler's Location Counter (LC).<br><u>Example:</u> `ORG 100H` instructs the assembler to start assembling the following code from hexadecimal address 100.</li><br><li><b>END:</b> This directive marks the end of the source program. It signals to the assembler that there is no more code to process. Any text after the END directive is ignored. It is essential for a properly formed assembly program.</li><br><li><b>EQU (Equate):</b> This directive is used to assign a constant value or an address to a symbolic name (a label). This improves code readability and maintainability, as the symbolic name can be used throughout the program instead of a hardcoded value.<br><u>Example:</b> `PI EQU 3.14` allows the programmer to use the symbol `PI` instead of the number 3.14.</li><br><li><b>DB / DW / DD (Define Byte / Word / Double Word):</b> These directives are used to allocate and initialize memory for data. They reserve storage space and place specific values into that space.<br>  - `DB` allocates one byte of memory.<br>  - `DW` allocates a word (typically 2 bytes).<br>  - `DD` allocates a double word (typically 4 bytes).<br><u>Example:</u> `MY_VAR DW 1234H` reserves two bytes of memory, labels the location as `MY_VAR`, and initializes it with the hexadecimal value 1234.</li></ul>",
+        "chapter": "3. Programming the Basic Computer",
+        "topic": "Assembly Language"
+    },
+    {
+        "question": "Explain the components of assembly language.",
+        "answer": "An assembly language program consists of a sequence of statements or lines, where each line represents either a machine instruction or an assembler directive. A typical assembly language statement is divided into four distinct fields:<br><br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Label Field (Optional):</b><br>This field assigns a symbolic name to the memory address of the current line. A label is an identifier that usually ends with a comma (,) or a colon (:), depending on the assembler's syntax. It allows other parts of the program to refer to this specific line's location, which is essential for implementing loops, conditional branches, and subroutine calls. If a line is not referenced elsewhere, the label field can be left blank.<br><u>Example:</u> `LOOP,`</li><br><li><b>Instruction/Opcode Field (Mnemonic Field):</b><br>This is a mandatory field that contains the mnemonic for the operation to be performed. A mnemonic is a short, easy-to-remember abbreviation for a machine instruction (e.g., `LDA` for Load Accumulator, `ADD` for Add) or an assembler directive (e.g., `ORG` for Origin, `END` for End).</li><br><li><b>Operand Field (Address Field):</b><br>This field specifies the data or address that the instruction will operate on. The content of this field depends heavily on the instruction in the opcode field. It can be a symbolic address (a label), a register name, a numeric constant, or be left empty for instructions that do not require an operand (e.g., `CLA` - Clear Accumulator).<br><u>Example:</u> For the instruction `LDA COUNT`, the operand is `COUNT`.</li><br><li><b>Comment Field (Optional):</b><br>This field is for human-readable notes and explanations. It begins with a special character (like a semicolon `;` or a slash `/`) and extends to the end of the line. Comments are completely ignored by the assembler and have no effect on the final machine code. They are crucial for documenting the code and making it understandable to others (and the original programmer later on).</li></ol><b>Example of a complete line:</b><br>`START, LDA X   / Load the content of memory location X into the accumulator`",
+        "chapter": "3. Programming the Basic Computer",
+        "topic": "Assembly Language"
+    },
+    {
+        "question": "Draw and explain the first pass of an assembler.",
+        "answer": "A two-pass assembler is a program that translates assembly language into machine code by scanning the source file twice. The primary purpose of the **first pass** is to identify all user-defined symbols (labels) and build a comprehensive **Symbol Table**. This table maps each symbol to its corresponding memory address.<br><br><b>Process of the First Pass:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Initialization:</b> The assembler initializes a Location Counter (LC). The LC is a variable that keeps track of the memory address for the current instruction being processed.</li><li><b>Scanning the Code:</b> The assembler reads the source code line by line from beginning to end.</li><li><b>Location Counter Management:</b><br> - If the assembler encounters an `ORG` directive, it sets the LC to the value specified in the operand field.<br> - For every instruction that generates machine code, the assembler increments the LC by the length of that instruction (e.g., by 1 for a one-word instruction).</li><li><b>Symbol Table Construction:</b><br> - For each line, the assembler checks if there is a symbol in the label field.<br> - If a label exists, the assembler creates an entry in the symbol table. This entry consists of the label's name and the current value of the Location Counter (LC). This effectively assigns the memory address to the symbol.</li><li><b>Handling Directives:</b> Directives like `DB` or `DW` also cause the LC to be incremented by the appropriate number of bytes. The `END` directive signals the end of the first pass.</li></ol><b>Output:</b><br>At the end of the first pass, no machine code has been generated. The sole output is the completed symbol table. This table is essential for the second pass, as it allows the assembler to resolve forward references (i.e., using a label as an operand before it has been defined in the code).",
+        "chapter": "3. Programming the Basic Computer",
+        "topic": "Assembler"
+    },
+    {
+        "question": "Draw and explain the second pass of an assembler.",
+        "answer": "The **second pass** of the assembler is responsible for the actual translation of the assembly language instructions into binary machine code. It utilizes the symbol table created during the first pass to resolve all symbolic addresses.<br><br><b>Process of the Second Pass:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Initialization:</b> The Location Counter (LC) is reset and managed in the same way as in the first pass.</li><li><b>Scanning the Code Again:</b> The assembler re-reads the source program from the beginning, line by line.</li><li><b>Instruction Translation:</b> For each line containing a machine instruction (not a directive):<br> a. The assembler looks up the mnemonic (e.g., `LDA`, `ADD`) in an internal **Operation Code Table (Op-Table)** to find its corresponding binary opcode.<br> b. It then examines the operand field. If the operand is a symbol (a label), the assembler looks up this symbol in the **Symbol Table** (generated in pass 1) to find its numeric memory address.<br> c. The assembler combines the binary opcode, the address, and any other required bits (like the addressing mode bit) to form the complete binary machine instruction.</li><li><b>Data Generation:</b> For data-defining directives (like `DB` or `DW`), the assembler converts the specified values into their binary representation and places them in the output file.</li><li><b>Object Code Generation:</b> The generated machine code instructions and data are assembled into an **Object Program** or object file. This file, along with relocation information, is the final output of the assembler.</li></ol><b>Why a Second Pass is Needed:</b><br>The two-pass structure is necessary to solve the problem of **forward references**. A forward reference occurs when an instruction refers to a label that is defined later in the program (e.g., `JMP LOOP` where the `LOOP` label is many lines below). In the first pass, the assembler cannot know the address of `LOOP` when it first encounters the jump instruction. However, after the first pass is complete, the symbol table contains the addresses of all labels, allowing the second pass to correctly substitute the address for `LOOP` when generating the machine code for the jump instruction.",
+        "chapter": "3. Programming the Basic Computer",
+        "topic": "Assembler"
+    },
+    {
+        "question": "Explain micro-instruction sequencing with a diagram.",
+        "answer": "In a microprogrammed control unit, the control signals are generated by executing a sequence of micro-instructions stored in a special memory called control memory. The process of determining the address of the next micro-instruction to be executed is called micro-instruction sequencing. This is managed by a component called a **Microprogram Sequencer**.<br><br><b>Components of a Microprogram Sequencer:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Control Memory (CM):</b> Stores the micro-instructions.</li><li><b>Control Address Register (CAR):</b> Holds the address of the micro-instruction currently being read from control memory. This is analogous to the Program Counter (PC) for main memory.</li><li><b>Next Address Generator:</b> A combinational circuit that determines the next address for the CAR. It can be implemented as a multiplexer that selects from several possible next addresses.</li></ul><b>Sequencing Techniques:</b><br>The next address can be determined in several ways:<br><ol><li><b>Incrementing CAR:</b> For sequential execution, the CAR is simply incremented by one to fetch the next micro-instruction in order.</li><li><b>Unconditional Branch:</b> The micro-instruction itself contains a field that specifies the address of the next micro-instruction. This address is loaded directly into the CAR.</li><li><b>Conditional Branch:</b> The branch depends on the status of certain condition bits or flags (e.g., Zero, Carry, Negative). The micro-instruction specifies a branch address, which is loaded into the CAR only if the condition is met. Otherwise, the CAR is incremented.</li><li><b>Mapping from Instruction Opcode:</b> At the beginning of an instruction cycle, the machine instruction's opcode is translated (mapped) into a starting address in the control memory where the corresponding micro-routine resides. This address is loaded into the CAR.</li><li><b>Subroutine Call and Return:</b> The sequencer can support micro-subroutines by pushing the current CAR value (return address) onto a stack and branching to the subroutine's starting address.</li></ol>The next address generator logic selects one of these options based on the control bits within the current micro-instruction, thus directing the flow of control at the micro-level.",
+        "chapter": "4. Microprogrammed Control",
+        "topic": "Address Sequencing"
+    },
+    {
+        "question": "Explain the mapping process with an example.",
+        "answer": "In a microprogrammed control unit, the mapping process is the crucial first step in executing a machine instruction. It is the mechanism that translates the opcode of a machine-level instruction into a starting address in the control memory. This starting address points to the beginning of the micro-routine that implements the machine instruction.<br><br><b>Purpose of Mapping:</b><br>Each machine instruction (like ADD, LDA, JMP) has a corresponding sequence of micro-instructions (a micro-routine) stored in the control memory. The mapping process ensures that when the control unit decodes a specific opcode, it knows exactly where to find the correct micro-routine to execute.<br><br><b>Implementation using Direct Mapping:</b><br>A simple and common method is direct mapping, where the opcode itself forms part of the control memory address. This can be implemented using a mapping ROM or programmable logic array (PLA), or by simple bit manipulation.<br><br><b>Example:</b><br>Let's assume the following:<br><ul><li>The machine instruction has a 4-bit opcode.</li><li>The control memory has 128 words, requiring a 7-bit address.</li></ul>A direct mapping function can be defined as follows: place the 4-bit opcode in the most significant bits of the control memory address, and append three zeros to the least significant bits.<br><br><b>Mapping Function:</b> `Address = [Opcode][000]`<br><br>Let's see how this works for two different opcodes:<br><ol><li><b>Instruction with opcode `0010` (e.g., ADD):</b><br> - The 4-bit opcode is `0010`.<br> - The mapping logic appends `000`.<br> - The resulting starting address in control memory is `0010000` (16 in decimal). The micro-routine for the ADD instruction will begin at this address.</li><br><li><b>Instruction with opcode `1011` (e.g., STA):</b><br> - The 4-bit opcode is `1011`.<br> - The mapping logic appends `000`.<br> - The resulting starting address in control memory is `1011000` (88 in decimal). The micro-routine for the STA instruction will begin at this address.</li></ol>This method reserves a block of addresses (in this case, 2^3 = 8 addresses) for each micro-routine, which is usually sufficient for simple instructions or to place a jump to a larger routine if needed.",
+        "chapter": "4. Microprogrammed Control",
+        "topic": "Micro Instruction Formats"
+    },
+    {
+        "question": "Draw & explain micro-instruction format.",
+        "answer": "A micro-instruction format defines the structure of the bits within a single micro-instruction. Each bit or group of bits (a field) in the format corresponds to a specific control signal or sequencing information. The design of the format is a trade-off between control memory size, decoding complexity, and the ability to execute micro-operations in parallel. There are two main types: horizontal and vertical.<br><br><b>Horizontal Micro-instruction Format:</b><br>This format is characterized by its long word length and minimal encoding.<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Structure:</b> Each bit in the micro-instruction directly corresponds to a single control signal in the CPU. If the bit is 1, the signal is active; if 0, it is inactive.</li><li><b>Fields:</b> A horizontal format is typically divided into several fields that control different hardware units in parallel, such as ALU control, register selection, condition codes for branching, and the next address field.</li><li><b>Advantages:</b> Allows for a high degree of parallelism because multiple control signals can be activated simultaneously within a single micro-instruction. This makes it very fast.</li><li><b>Disadvantages:</b> It leads to very wide micro-instructions and thus a large and expensive control memory, as there must be a bit for almost every control line in the CPU.</li></ul><b>Vertical Micro-instruction Format:</b><br>This format uses a more compact, encoded approach.<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Structure:</b> Control signals are grouped and encoded into fields. For example, a 3-bit field can specify one of eight possible ALU operations. External decoders are required to translate these encoded fields into the actual control signals.</li><li><b>Advantages:</b> Results in shorter micro-instructions, leading to a smaller and cheaper control memory.</li><li><b>Disadvantages:</b> It is less flexible and offers less parallelism, as only one operation from each encoded group can be activated at a time. The decoding process also introduces a slight delay, making it potentially slower than the horizontal approach.</li></ul><b>Typical Hybrid Format:</b><br>In practice, most systems use a hybrid approach that combines the best of both. The format is divided into fields, and within each field, a vertical encoding is used. For example:<br>| F1 (3 bits) | F2 (3 bits) | F3 (3 bits) | CD (2 bits) | BR (2 bits) | AD (7 bits) |<br> - <b>F1, F2, F3:</b> Micro-operation fields (e.g., ALU, register source/dest).<br> - <b>CD:</b> Condition for branching (e.g., Unconditional, Zero, Negative).<br> - <b>BR:</b> Branch type (e.g., Jump, Call, Return).<br> - <b>AD:</b> Next address field.",
+        "chapter": "4. Microprogrammed Control",
+        "topic": "Design of Control Unit"
+    },
+    {
+        "question": "Draw & explain the design of a control unit.",
+        "answer": "The control unit (CU) is the component of the CPU that directs and coordinates the operations of the processor. It interprets instructions and generates the control signals that operate the other CPU components. There are two primary design philosophies for a control unit: hardwired and microprogrammed.<br><br><b>1. Hardwired Control Unit:</b><br>In this design, the control logic is implemented as a finite state machine using a fixed network of combinational and sequential logic circuits (gates, flip-flops, decoders).<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Design:</b> The control unit's inputs are the instruction register, status flags, and timing signals from a clock. This logic is physically wired to produce specific output control signals. The design is tailored specifically to the computer's instruction set architecture (ISA).</li><li><b>Operation:</b> It operates very quickly because the control signals are generated directly through the hardware logic paths.</li><li><b>Advantages:</b><br>  - <b>Speed:</b> It is the fastest method of control unit design.<br>  - <b>Efficiency:</b> Can be optimized for a specific instruction set.</li><li><b>Disadvantages:</b><br>  - <b>Inflexible:</b> Extremely difficult to modify or add new instructions. Any change to the ISA requires a complete redesign and rewiring of the hardware.<br>  - <b>Complex:</b> The design process for a complex instruction set can be very complicated and error-prone.</li></ul><b>2. Microprogrammed Control Unit:</b><br>In this design, the control logic is stored in a special memory called Control Memory (or Control Store). Instead of being generated by logic gates, control signals are generated by reading a sequence of micro-instructions from this memory.<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Design:</b> It includes a Control Memory (ROM/RAM) to store the micro-instructions and a Microprogram Sequencer to control the fetching of the next micro-instruction.</li><li><b>Operation:</b> To execute a machine instruction, the CU looks up the corresponding micro-routine in the control memory and executes the micro-instructions one by one. Each micro-instruction specifies the control signals to be activated.</li><li><b>Advantages:</b><br>  - <b>Flexible:</b> The instruction set can be changed by simply updating the microprogram in the control memory (updating the firmware). This makes it easier to fix bugs or add new instructions.<br>  - <b>Simpler Design:</b> The design process is more systematic and less complex than designing intricate logic circuits.</li><li><b>Disadvantages:</b><br>  - <b>Slower:</b> It is slower than a hardwired unit because of the extra time required to fetch micro-instructions from the control memory.</li></ul>",
+        "chapter": "4. Microprogrammed Control",
+        "topic": "Design of Control Unit"
+    }
+]
