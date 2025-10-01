@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COA Q&A Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa; /* Light gray background */
+            color: #212529;
+        }
+        .qa-card .answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .qa-card.active .answer {
+            max-height: 2000px; /* Increased max-height for images */
+            margin-top: 1.5rem;
+        }
+        .qa-card.active .arrow {
+            transform: rotate(180deg);
+        }
+        .nav-btn {
+            transition: all 0.2s ease-in-out;
+            border: 1px solid transparent;
+        }
+        .nav-btn.active {
+            background-color: #007bff; /* Primary blue */
+            color: #FFFFFF;
+            box-shadow: 0 4px 14px 0 rgba(0, 118, 255, 0.39);
+            border-color: #007bff;
+        }
+        .topic-btn.active {
+             background-color: #28a745; /* Success green */
+             color: #FFFFFF;
+             border-color: #28a745;
+        }
+        #topic-filters {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .answer img {
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #dee2e6;
+        }
+        /* Loading Spinner */
+        #loading-overlay {
+            display: none; /* Hidden by default */
+        }
+        #loading-overlay.flex {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 tracking-tight">Computer Organization & Architecture</h1>
+            <p class="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">An interactive study guide. Select a chapter, filter by topic, and click a question to reveal the answer.</p>
+            <button id="generate-quiz-btn" class="mt-6 px-6 py-3 bg-purple-600 text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 transition-all duration-300 transform hover:scale-105">
+                ✨ Generate a Practice Quiz
+            </button>
+        </header>
+
+        <!-- Chapter Filters -->
+        <nav id="chapter-filters" class="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
+             <p class="w-full text-center font-semibold text-gray-700 mb-2">Filter by Chapter:</p>
+        </nav>
+
+        <!-- Topic Filters -->
+        <nav id="topic-filters" class="flex flex-wrap justify-center gap-2 md:gap-3 mb-12 opacity-0">
+             <p class="w-full text-center font-semibold text-gray-700 mb-2">Filter by Topic:</p>
+        </nav>
+
+        <main id="qa-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Q&A Cards will be injected here -->
+        </main>
+    </div>
+    
+    <!-- Modal for Quiz -->
+    <div id="quiz-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div id="quiz-modal-content" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
+            <button id="close-quiz-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            <!-- Quiz content will be injected here -->
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-75 items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+    </div>
+
+
+    <script>
+        const qaData = [
+            // Chapter 1
+            {
+                question: "Implement common bus system with 4 registers of four bits using multiplexers.",
+                answer: "A common bus system for four 4-bit registers can be implemented using four 4x1 multiplexers (MUX). Each MUX selects one bit from the four registers. The selection lines (S1, S0) are connected to all MUXes simultaneously to choose which register's data is placed on the bus.<br><br><b>How it works:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>There are 4 registers (R0, R1, R2, R3), each with 4 bits.</li><li>There are 4 multiplexers, one for each bit of the bus (Bus Bit 0 to Bus Bit 3).</li><li>The i-th bit from all four registers is connected to the inputs of the i-th MUX. For example, R0[0], R1[0], R2[0], and R3[0] are inputs to MUX 0.</li><li>The two selection lines S1 and S0 determine which register is selected. For example, if S1S0 = 01, MUXes will select the data from Register 1 (R1) to be placed on the common bus.</li></ul> ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "Bus and Memory Transfers"
+            },
+            {
+                question: "Explain tri-state buffer.",
+                answer: "A tri-state buffer is a type of digital logic gate that has three possible output states: High (1), Low (0), and a High-Impedance (Hi-Z) state. The Hi-Z state behaves like an open circuit, effectively disconnecting the output from the circuit.<br><br>It has two inputs: a data input (A) and a control input (C).<br><ul class='list-disc list-inside mt-2 space-y-1'><li>When the control input is enabled (C=1), the output (Y) is equal to the data input (Y=A).</li><li>When the control input is disabled (C=0), the output enters the High-Impedance state, regardless of the data input value.</li></ul>Tri-state buffers are essential for creating bus systems where multiple devices share the same data lines. Only one device's buffer is enabled at a time to drive the bus, while all others are in the Hi-Z state. ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "Bus and Memory Transfers"
+            },
+            {
+                question: "Explain adder and subtractor circuits.",
+                answer: "<b>Full Adder:</b> A combinational circuit that performs the addition of three bits: two operand bits (A, B) and a carry-in bit (Cin). It produces two outputs: a Sum (S) and a Carry-out (Cout). It's the fundamental building block for adding binary numbers.<br><br><b>Subtractor:</b> Subtraction (A - B) can be performed by taking the 2's complement of B and adding it to A (A + 2's complement of B). A 2's complement is found by inverting all bits (1's complement) and adding 1. A full adder circuit can be converted into a subtractor by inverting the B input and setting the initial carry-in (Cin) to 1. An XOR gate is often used to control whether the operation is addition or subtraction. ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "Arithmetic Micro-operations"
+            },
+            {
+                question: "Explain & draw a 4-bit arithmetic circuit.",
+                answer: "A 4-bit arithmetic circuit can perform various arithmetic micro-operations like addition, subtraction, increment, and decrement on two 4-bit inputs (A and B). It is constructed using 4 full-adders (FAs) linked in a cascade, along with multiplexers to control the operation.<br><br><b>Components:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>Four Full Adders: Each FA computes the sum of two bits and a carry-in.</li><li>Multiplexers: Used at the 'B' input of each FA. Selection lines (S1, S0) control what value is passed to the FA (e.g., B, B', 0, or 1), thus determining the operation.</li><li>A control input (Cin) is also used, especially for subtraction (set to 1) and increment operations.</li></ul>The output is a 4-bit result (Y) and a final carry-out (Cout). ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "Arithmetic Micro-operations"
+            },
+            {
+                question: "List out applications of logic microoperations.",
+                answer: "Logic micro-operations perform bitwise operations on data stored in registers. They are fundamental for bit manipulation tasks. Applications include:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Selective Set:</b> Using the OR operation to force specific bits to 1. (e.g., `A OR 1100` sets the two most significant bits of A to 1).</li><li><b>Selective Clear:</b> Using the AND operation with a mask to force specific bits to 0. (e.g., `A AND 0011` clears the two most significant bits of A).</li><li><b>Selective Complement:</b> Using the XOR operation to invert specific bits. (e.g., `A XOR 1100` inverts the two most significant bits).</li><li><b>Masking:</b> Using the AND operation to extract specific bits from a value. (e.g., `A AND 11110000` keeps the upper nibble and clears the lower).</li><li><b>Insert:</b> Combining masking (clearing) and ORing to insert new bit values into a word.</li><li><b>Compare:</b> Using the XOR operation. If the result is all zeros, the two operands were identical.</li></ul>",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "Logic Micro-operations"
+            },
+            {
+                question: "Explain arithmetic shift and circular shift.",
+                answer: "<b>Arithmetic Shift:</b> A shift micro-operation that treats the data as a signed binary number. <br><u>Arithmetic Shift Right:</u> Shifts all bits to the right. The original most significant bit (MSB), which is the sign bit, is copied into the new MSB position to preserve the sign of the number. It's equivalent to dividing the signed number by 2.<br><u>Arithmetic Shift Left:</u> Shifts all bits to the left. A 0 is inserted into the least significant bit (LSB) position. It's equivalent to multiplying the number by 2. An overflow may occur if the sign bit changes.<br><br><b>Circular Shift (Rotate):</b> Bits are shifted, but no bits are lost. The bit shifted out from one end of the register is circulated back into the other end.<br><u>Circular Shift Right:</u> The LSB is shifted out and moved to the MSB position.<br><u>Circular Shift Left:</u> The MSB is shifted out and moved to the LSB position. ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "Shift Micro-operations"
+            },
+            {
+                question: "Draw & explain the Arithmetic Logic Shift Unit (ALSU).",
+                answer: "An Arithmetic Logic Shift Unit (ALSU or ALU) is a powerful digital combinational circuit that can perform a wide range of arithmetic, logic, and shift operations. It is a fundamental component of a computer's CPU.<br><br>It combines an arithmetic circuit, a logic circuit, and a shifter into one unit. Selection lines are used to determine which operation the ALSU will perform on the input operands (A and B). For example, a 4-bit ALSU might have selection lines S3, S2, S1, S0, and a mode input M to select from up to 32 different operations. ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "Arithmetic Logic Shift Unit"
+            },
+             {
+                question: "Explain general register organization.",
+                answer: "In a general register organization, the CPU contains a set of general-purpose registers that are not dedicated to any specific function. This provides flexibility to the programmer or compiler.<br><br><b>Characteristics:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>A control unit selects the registers for each operation.</li><li>An ALU performs the computation.</li><li>The registers are connected through a common bus system.</li><li>Instruction formats must specify not only the operation but also which registers to use. For example, an instruction like `ADD R1, R2, R3` would mean R1 ← R2 + R3.</li></ul>This organization is faster than having a single accumulator because intermediate results can be kept in registers, reducing memory access. ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "CPU Organization"
+            },
+             {
+                question: "Explain register stack & memory stack.",
+                answer: "A stack is a data structure where items are inserted and removed from the same end, known as the top of the stack (Last-In, First-Out or LIFO).<br><br><b>Register Stack:</b> A stack implemented within the CPU using a collection of registers. It is very fast due to the high speed of registers. However, its size is limited by the number of available CPU registers. A stack pointer (SP) register holds the address of the top of the stack.<br><br><b>Memory Stack:</b> A stack implemented in a portion of the main memory (RAM). The size of a memory stack is much larger and more flexible. A stack pointer (SP) register is still used, but it points to a memory location instead of a register. Operations on a memory stack are slower because they require memory access. ",
+                chapter: "1. Register Transfer & Micro-operations",
+                topic: "CPU Organization"
+            },
+            // Chapter 2
+            {
+                question: "Differentiate direct & indirect addressing modes.",
+                answer: "Addressing modes determine how the operand of an instruction is specified.<br><br><b>Direct Addressing:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>The address field of the instruction contains the actual memory address of the operand.</li><li>Only one memory access is required to fetch the operand.</li><li>It provides a limited address space, determined by the size of the address field.</li><li>Instruction: `ADD X` (X is the memory address of the operand).</li></ul><b>Indirect Addressing:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li>The address field of the instruction contains the address of a memory location, which in turn holds the actual address of the operand.</li><li>Two memory accesses are required: one to get the operand's address, and a second to get the operand itself.</li><li>It provides a larger address space and more flexibility, for example, in implementing pointers.</li><li>Instruction: `ADD @X` (X is a memory location that contains the address of the operand).</li></ul> ",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Computer Instructions"
+            },
+            {
+                question: "Explain the common bus system with all CPU registers.",
+                answer: "In a basic computer, the registers in the CPU are interconnected via a common bus. This bus allows for the transfer of data between registers and between registers and memory. Key registers connected to the common bus include:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>PC (Program Counter):</b> Holds the address of the next instruction.</li><li><b>AR (Address Register):</b> Holds the memory address for read/write operations.</li><li><b>IR (Instruction Register):</b> Holds the current instruction being executed.</li><li><b>DR (Data Register):</b> Holds data read from or written to memory.</li><li><b>AC (Accumulator):</b> A general-purpose register for processing.</li><li><b>TR (Temporary Register):</b> Used for holding temporary data.</li></ul>The control unit manages the bus, ensuring that only one register outputs its data onto the bus at any given time by enabling its corresponding tri-state buffer or multiplexer selection. ",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Computer Registers"
+            },
+            {
+                question: "Explain a basic computer instruction.",
+                answer: "A computer instruction is a binary code that specifies a sequence of micro-operations for the computer to perform. It is divided into parts, typically an opcode and an address/operand.<br><br>A common format is a 16-bit instruction:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Address (Bits 0-11):</b> Specifies the address of an operand or a memory location.</li><li><b>Opcode (Bits 12-14):</b> Specifies the operation to be performed (e.g., ADD, AND, LDA).</li><li><b>Mode Bit (Bit 15):</b> Specifies the addressing mode. 0 for Direct Addressing, 1 for Indirect Addressing.</li></ul>For example, an instruction could specify loading data from a memory location into the accumulator. ",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Computer Instructions"
+            },
+            {
+                question: "Draw and explain the instruction cycle.",
+                answer: "The instruction cycle is the fundamental process by which a computer executes a single instruction. It consists of a sequence of steps:<br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Fetch:</b> The instruction is read from the memory location pointed to by the Program Counter (PC) and loaded into the Instruction Register (IR). The PC is then incremented.</li><li><b>Decode:</b> The control unit decodes the instruction in the IR to determine the operation to be performed and the addressing mode.</li><li><b>Execute:</b> The control unit generates the necessary control signals to perform the specified operation. This might involve fetching operands from memory, performing an ALU operation, and storing the result.</li></ol>After execution, the cycle repeats for the next instruction. This fetch-decode-execute sequence is the basis of computer operation. ",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Instruction Cycle"
+            },
+            {
+                question: "Explain memory reference instructions.",
+                answer: "Memory-reference instructions are instructions that require accessing memory to fetch an operand. In a basic computer, these instructions have an opcode from 000 to 110. The remaining 12 bits of the instruction are used to specify a memory address.<br><br>Examples include:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>AND:</b> Performs a bitwise AND operation between the data at the specified memory address and the value in the accumulator.</li><li><b>ADD:</b> Adds the data from the memory address to the accumulator.</li><li><b>LDA (Load Accumulator):</b> Loads the data from the memory address into the accumulator.</li><li><b>STA (Store Accumulator):</b> Stores the content of the accumulator into the specified memory address.</li><li><b>BUN (Branch Unconditionally):</b> Transfers program control to the specified memory address.</li><li><b>BSA (Branch and Save Return Address):</b> Branches to a subroutine, saving the return address.</li><li><b>ISZ (Increment and Skip if Zero):</b> Increments the word at the memory address and skips the next instruction if the result is zero.</li></ul>",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Memory-Reference Instructions"
+            },
+            {
+                question: "Explain and draw the interrupt cycle.",
+                answer: "An interrupt is a signal from a hardware device or software that indicates an event needing immediate attention. The interrupt cycle is a hardware-implemented process that handles this interruption of the normal instruction cycle.<br><br><b>Steps:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li>The CPU checks for an interrupt signal after executing each instruction.</li><li>If an interrupt is detected, the CPU saves the current state (e.g., the value of the Program Counter) to a known location, typically the stack.</li><li>The CPU then loads the PC with the address of the specific interrupt service routine (ISR) for the device that caused the interrupt.</li><li>The ISR is executed to handle the event.</li><li>After the ISR completes, the saved state (return address) is restored to the PC, and the original program resumes execution.</li></ol>This allows the CPU to handle asynchronous I/O events without constantly polling devices. ",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Input-Output and Interrupt"
+            },
+            {
+                question: "Draw and explain the timing & control unit of a basic computer.",
+                answer: "The Timing and Control unit is the 'brain' of the CPU. It generates timing signals and control signals that coordinate all operations within the computer. It ensures that micro-operations are executed in the correct sequence.<br><br><b>Components:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Instruction Register (IR):</b> Holds the opcode of the current instruction.</li><li><b>Decoder:</b> Interprets the opcode to determine which operation to perform.</li><li><b>Sequence Counter (SC):</b> A counter that produces a sequence of timing signals (T0, T1, T2, ...). These signals enable specific micro-operations at each clock pulse.</li><li><b>Control Logic Gates:</b> A combinational circuit that takes inputs from the decoder, sequence counter, and status flags, and generates the specific control signals (e.g., register read/write, ALU operation select).</li></ul>Together, these components create a hardwired control unit that directs the flow of data and execution of instructions. ",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Timing and Control"
+            },
+            {
+                question: "Explain program interrupt.",
+                answer: "A program interrupt refers to the transfer of program control from a currently running program to another service program as a result of an external or internal event. This allows the computer to respond to I/O events and errors efficiently.<br><br><b>Types of Interrupts:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>External Interrupts:</b> Caused by I/O devices, such as a keyboard press or a disk controller finishing a data transfer.</li><li><b>Internal Interrupts (Traps):</b> Caused by an error condition during program execution, like illegal opcode, division by zero, or overflow.</li><li><b>Software Interrupts:</b> Caused by executing a special instruction. They are used by programs to request services from the operating system.</li></ul>When an interrupt occurs, the processor suspends the current program, saves its state, and executes an interrupt handler (Interrupt Service Routine) to deal with the event. After handling, the original program's state is restored and it resumes execution.",
+                chapter: "2. Basic Computer Organization & Design",
+                topic: "Input-Output and Interrupt"
+            },
+            // Chapter 3
+            {
+                question: "List and explain pseudo instructions.",
+                answer: "Pseudo instructions (or assembler directives) are not actual machine instructions. They are commands for the assembler itself, used to control the assembly process, define data, and organize the program.<br><br><b>Common Pseudo Instructions:</b><br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>ORG (Origin):</b> Specifies the starting memory address for the following code or data. Example: `ORG 100H`</li><li><b>EQU (Equate):</b> Assigns a symbolic name to a constant value. Example: `COUNT EQU 10`</li><li><b>DB/DW (Define Byte/Word):</b> Allocates memory for a variable and initializes it with a value. Example: `VAR1 DB 25H`</li><li><b>END:</b> Marks the end of the source program file. The assembler will stop processing after this directive.</li></ul>",
+                chapter: "3. Programming the Basic Computer",
+                topic: "Assembly Language"
+            },
+            {
+                question: "Explain the components of assembly language.",
+                answer: "An assembly language program is a sequence of statements or lines, which can be either an instruction or a pseudo-instruction (directive). Each line is typically composed of four fields:<br><br><ol class='list-decimal list-inside mt-2 space-y-1'><li><b>Label Field (Optional):</b> A symbolic name for a memory address. It is used to refer to that line from other parts of the program (e.g., for jumps or loops). It is terminated by a comma. Example: `LOOP,`</li><li><b>Instruction/Opcode Field:</b> Contains the mnemonic for a machine instruction (e.g., `ADD`, `LDA`) or a pseudo-instruction (e.g., `ORG`, `END`).</li><li><b>Operand Field:</b> Specifies the address or data that the instruction will operate on. It can be a memory address, a register, or a constant value.</li><li><b>Comment Field (Optional):</b> Begins with a specific character (like a slash or semicolon) and contains explanatory notes for the programmer. Comments are ignored by the assembler.</li></ol>Example line: `LOOP, LDA X  / Load the value from address X`",
+                chapter: "3. Programming the Basic Computer",
+                topic: "Assembly Language"
+            },
+            {
+                question: "Draw and explain the first pass of an assembler.",
+                answer: "An assembler translates assembly language code into machine code. A two-pass assembler does this in two stages. The primary purpose of the first pass is to build a symbol table.<br><br><b>Process:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li>The assembler scans the source code from beginning to end.</li><li>It maintains a Location Counter (LC), which keeps track of the memory address for each instruction. The LC is initialized with the address specified by the `ORG` directive.</li><li>For each line, the assembler checks the label field. If a label exists, the assembler adds the label's name and its corresponding memory address (the current value of the LC) to the symbol table.</li><li>The assembler increments the LC after processing each instruction.</li></ol>At the end of the first pass, the symbol table contains all the user-defined symbolic addresses and their numeric equivalents. This table is crucial for resolving addresses in the second pass. ",
+                chapter: "3. Programming the Basic Computer",
+                topic: "Assembler"
+            },
+            {
+                question: "Draw and explain the second pass of an assembler.",
+                answer: "The second pass of the assembler performs the actual translation of the source code into machine code, using the symbol table created in the first pass.<br><br><b>Process:</b><br><ol class='list-decimal list-inside mt-2 space-y-1'><li>The assembler scans the source code again from the beginning.</li><li>For each instruction, it looks up the mnemonic in a machine operation table (MOT) to find its binary opcode.</li><li>It then looks up the operand's symbolic name (if any) in the symbol table to find its corresponding memory address.</li><li>The assembler combines the opcode and the address to generate the final binary machine instruction.</li><li>This process is repeated for all instructions, creating the complete object code (machine code).</li></ol>The second pass resolves all forward references (references to labels that appear later in the code) using the completed symbol table. ",
+                chapter: "3. Programming the Basic Computer",
+                topic: "Assembler"
+            },
+            // Chapter 4
+            {
+                question: "Explain micro-instruction sequencing with a diagram.",
+                answer: "In a microprogrammed control unit, the control signals are generated by reading micro-instructions from a control memory. Micro-instruction sequencing is the process of determining the address of the next micro-instruction to be executed.<br><br>A microprogram sequencer is responsible for this. It typically includes:<br><ul class='list-disc list-inside mt-2 space-y-1'><li><b>Control Address Register (CAR):</b> Holds the address of the current micro-instruction.</li><li><b>Next Address Generator:</b> A combinational circuit that determines the next address based on inputs like status flags and the current micro-instruction's sequencing field.</li><li><b>Sequencing Logic:</b> Can perform actions like incrementing the CAR (for sequential execution), branching to a new address based on a condition, or loading a starting address from a mapping logic unit.</li></ul>This allows for flexible control flow within the microprogram, including loops and conditional branches. ",
+                chapter: "4. Microprogrammed Control",
+                topic: "Address Sequencing"
+            },
+            {
+                question: "Explain the mapping process with an example.",
+                answer: "Mapping is the process of translating a machine instruction's opcode into a starting address in the control memory where the microprogram routine for that instruction is located. This is a key step in initiating the execution of a new instruction in a microprogrammed control unit.<br><br><b>Example:</b><br>Suppose we have a 4-bit opcode. A simple mapping method is to use the opcode directly as part of the control memory address. We can append zeros to the opcode to form the starting address.<br><ul class='list-disc list-inside mt-2 space-y-1'><li>Let the machine instruction opcode be `1011`.</li><li>A mapping function could be to add three zeros to the right, creating the 7-bit control memory address `1011000`.</li><li>The micro-routine for the instruction with opcode `1011` would start at this address in the control memory.</li></ul>This is a simple direct mapping. More complex mapping can be done using ROMs or PLAs. ",
+                chapter: "4. Microprogrammed Control",
+                topic: "Address Sequencing"
+            },
+            {
+                question: "Draw & explain micro-instruction format.",
+                answer: "A micro-instruction format defines how the bits of a micro-instruction are organized. It is divided into fields, with each field controlling a specific part of the CPU (e.g., ALU, registers).<br><br>A common format is the <b>Horizontal Micro-instruction</b>:<br><ul class='list-disc list-inside mt-2 space-y-1'><li>It has a wide format with many bits.</li><li>Each bit directly corresponds to a control signal. A '1' means the signal is active, a '0' means it is inactive.</li><li>This allows for high parallelism (many operations at once) but can lead to very large control memory.</li></ul>Another format is the <b>Vertical Micro-instruction</b>:<br><ul class='list-disc list-inside mt-2 space-y-1'><li>It is more compact. Fields are encoded, and decoders are needed to generate the actual control signals.</li><li>For example, a 3-bit field could specify one of eight ALU operations.</li><li>This reduces the size of the control memory but is less parallel and can be slower due to the decoding step.</li></ul>A typical format includes fields for ALU control, register selection, condition codes for branching, and the address of the next micro-instruction. ",
+                chapter: "4. Microprogrammed Control",
+                topic: "Micro Instruction Formats"
+            },
+            {
+                question: "Draw & explain the design of a control unit.",
+                answer: "The control unit can be designed in two main ways: Hardwired or Microprogrammed.<br><br><b>Hardwired Control Unit:</b><br>The control logic is implemented with gates, flip-flops, decoders, and other digital circuits. The logic is fixed. It is very fast but also inflexible. If the instruction set needs to be modified, the wiring and circuit have to be redesigned.<br><br><b>Microprogrammed Control Unit:</b><br>The control logic is stored in a special memory called control memory. Control signals are generated by executing a sequence of micro-instructions (a microprogram). It is more flexible than a hardwired unit because changes can be made by updating the microprogram in the control memory. However, it is slower due to the time it takes to fetch micro-instructions from memory. Its design centers around a microprogram sequencer that controls the fetching of the next micro-instruction. ",
+                chapter: "4. Microprogrammed Control",
+                topic: "Design of Control Unit"
+            }
+        ];
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const qaContainer = document.getElementById('qa-container');
+            const chapterFiltersContainer = document.getElementById('chapter-filters');
+            const topicFiltersContainer = document.getElementById('topic-filters');
+            const generateQuizBtn = document.getElementById('generate-quiz-btn');
+            const quizModal = document.getElementById('quiz-modal');
+            const quizModalContent = document.getElementById('quiz-modal-content');
+            const closeQuizModalBtn = document.getElementById('close-quiz-modal');
+            const loadingOverlay = document.getElementById('loading-overlay');
+
+            // --- Gemini API Configuration ---
+            const API_KEY = ""; // Kept empty as per instructions
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+            
+            const showLoader = (show) => {
+                loadingOverlay.style.display = show ? 'flex' : 'none';
+            };
+
+            // Reusable Gemini API call function with exponential backoff
+            const callGeminiAPI = async (payload, retries = 3, delay = 1000) => {
+                showLoader(true);
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429 && retries > 0) { // Too Many Requests
+                            await new Promise(res => setTimeout(res, delay));
+                            return callGeminiAPI(payload, retries - 1, delay * 2);
+                        }
+                        throw new Error(`API error: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) throw new Error("No content received from API.");
+                    return text;
+
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    return "Sorry, something went wrong while trying to generate the content.";
+                } finally {
+                    showLoader(false);
+                }
+            };
+
+            // --- UI Rendering ---
+            const chapters = ['All Chapters', ...new Set(qaData.map(item => item.chapter))];
+
+            function renderChapterFilters() {
+                chapters.forEach(chapter => {
+                    const btn = document.createElement('button');
+                    btn.textContent = chapter;
+                    btn.className = 'nav-btn px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-700 shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+                    btn.dataset.chapter = chapter;
+                    if (chapter === 'All Chapters') btn.classList.add('active');
+                    chapterFiltersContainer.appendChild(btn);
+                });
+            }
+            
+            function renderTopicFilters(selectedChapter) {
+                topicFiltersContainer.innerHTML = '<p class="w-full text-center font-semibold text-gray-700 mb-2">Filter by Topic:</p>';
+                if (selectedChapter === 'All Chapters') {
+                    topicFiltersContainer.classList.add('opacity-0', 'h-0', 'overflow-hidden');
+                    return;
+                }
+                const topics = ['All Topics', ...new Set(qaData.filter(item => item.chapter === selectedChapter).map(item => item.topic))];
+                topics.forEach(topic => {
+                    const btn = document.createElement('button');
+                    btn.textContent = topic;
+                    btn.className = 'topic-btn nav-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-gray-600 shadow-sm hover:bg-gray-100';
+                    btn.dataset.topic = topic;
+                    if (topic === 'All Topics') btn.classList.add('active');
+                    topicFiltersContainer.appendChild(btn);
+                });
+                topicFiltersContainer.classList.remove('opacity-0', 'h-0', 'overflow-hidden');
+            }
+
+            function renderQACards(chapterFilter = 'All Chapters', topicFilter = 'All Topics') {
+                qaContainer.innerHTML = '';
+                let filteredData = getFilteredData(chapterFilter, topicFilter);
+                if (filteredData.length === 0) {
+                     qaContainer.innerHTML = `<p class="text-center text-gray-500 col-span-full">No questions found for this filter.</p>`;
+                     return;
+                }
+                filteredData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'qa-card bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-xl transition-shadow duration-300';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <h2 class="text-md font-semibold text-gray-800 flex-1 pr-4">${item.question}</h2>
+                            <div class="flex flex-col items-center space-y-2">
+                               <svg class="arrow w-6 h-6 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        <div class="answer text-gray-600 prose prose-sm max-w-none">
+                            <div>${item.answer}</div>
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <button class="simplify-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-full transition-colors">
+                                    ✨ Simplify
+                                </button>
+                                <div class="simplified-answer bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-3 mt-3 rounded-r-lg" style="display: none;"></div>
+                            </div>
+                        </div>
+                    `;
+                    qaContainer.appendChild(card);
+                });
+            }
+            
+            function getFilteredData(chapterFilter, topicFilter) {
+                 let filteredData = qaData;
+                if (chapterFilter !== 'All Chapters') {
+                    filteredData = filteredData.filter(item => item.chapter === chapterFilter);
+                }
+                if (topicFilter !== 'All Topics' && chapterFilter !== 'All Chapters') {
+                    filteredData = filteredData.filter(item => item.topic === topicFilter);
+                }
+                return filteredData;
+            }
+
+            // --- Gemini Feature Handlers ---
+            async function handleSimplify(e) {
+                const simplifyBtn = e.target.closest('.simplify-btn');
+                if (!simplifyBtn) return;
+
+                const card = simplifyBtn.closest('.qa-card');
+                const answerDiv = card.querySelector('.answer > div:first-child');
+                const question = card.querySelector('h2').textContent;
+                const answer = answerDiv.textContent; // Use textContent to get clean text for the prompt
+                const simplifiedAnswerDiv = card.querySelector('.simplified-answer');
+                
+                if (simplifiedAnswerDiv.style.display === 'block') { // Toggle off
+                    simplifiedAnswerDiv.style.display = 'none';
+                    return;
+                }
+                
+                simplifiedAnswerDiv.innerHTML = 'Generating a simpler explanation...';
+                simplifiedAnswerDiv.style.display = 'block';
+
+                const prompt = `Explain the following concept from a Computer Architecture course as if you were explaining it to a 10-year-old, using a simple analogy. Keep it concise (under 100 words). Concept: "${question}" - The explanation is: "${answer}"`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+                const simplifiedText = await callGeminiAPI(payload);
+                simplifiedAnswerDiv.innerHTML = simplifiedText.replace(/\n/g, '<br>');
+            }
+            
+            async function handleGenerateQuiz() {
+                const chapterFilter = document.querySelector('#chapter-filters .nav-btn.active').dataset.chapter;
+                const topicFilter = document.querySelector('#topic-filters .topic-btn.active')?.dataset.topic || 'All Topics';
+                const filteredData = getFilteredData(chapterFilter, topicFilter);
+
+                if (filteredData.length === 0) {
+                    alert("Please select a chapter with questions to generate a quiz.");
+                    return;
+                }
+
+                quizModalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4">✨ Generating Your Quiz...</h2><p>Please wait while we prepare some questions for you.</p>`;
+                quizModal.style.display = 'flex';
+
+                const context = filteredData.map(item => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
+                const prompt = `You are a Computer Architecture professor. Based on the following questions and answers, create a 5-question multiple-choice quiz with 4 options for each. Ensure the correct answer is one of the options. Here is the content:\n\n${context}`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    "question": { "type": "STRING" },
+                                    "options": { "type": "ARRAY", "items": { "type": "STRING" } },
+                                    "answer": { "type": "STRING" }
+                                },
+                                required: ["question", "options", "answer"]
+                            }
+                        }
+                    }
+                };
+                
+                const quizJsonText = await callGeminiAPI(payload);
+                try {
+                    const quizData = JSON.parse(quizJsonText);
+                    renderQuiz(quizData);
+                } catch (e) {
+                    quizModalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-red-600">Error</h2><p>Sorry, we couldn't generate the quiz. The AI returned an unexpected format. Please try again.</p>`;
+                    console.error("Failed to parse quiz JSON:", e);
+                }
+            }
+
+            function renderQuiz(quizData) {
+                let quizHtml = `<h2 class="text-2xl font-bold mb-4">Practice Quiz</h2>`;
+                quizData.forEach((item, index) => {
+                    quizHtml += `
+                        <div class="mb-6 quiz-item">
+                            <p class="font-semibold mb-2">${index + 1}. ${item.question}</p>
+                            <div class="space-y-2 options-container">
+                                ${item.options.map(option => `
+                                    <label class="flex items-center p-2 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer">
+                                        <input type="radio" name="q${index}" value="${option}" class="mr-3">
+                                        <span>${option}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                            <p class="correct-answer text-green-600 font-bold mt-2" style="display:none;">Correct Answer: ${item.answer}</p>
+                        </div>
+                    `;
+                });
+                quizHtml += `<button id="show-answers-btn" class="w-full mt-4 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-colors">Show Answers</button>`;
+                quizModalContent.innerHTML = quizHtml;
+            }
+
+            // --- Event Listeners ---
+            chapterFiltersContainer.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') return;
+                document.querySelectorAll('#chapter-filters .nav-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                const selectedChapter = e.target.dataset.chapter;
+                renderTopicFilters(selectedChapter);
+                renderQACards(selectedChapter);
+            });
+            
+            topicFiltersContainer.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') return;
+                document.querySelectorAll('#topic-filters .topic-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                const selectedChapter = document.querySelector('#chapter-filters .nav-btn.active').dataset.chapter;
+                const selectedTopic = e.target.dataset.topic;
+                renderQACards(selectedChapter, selectedTopic);
+            });
+
+            qaContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.qa-card');
+                if (card && !e.target.closest('.simplify-btn')) {
+                    card.classList.toggle('active');
+                }
+                handleSimplify(e);
+            });
+            
+            generateQuizBtn.addEventListener('click', handleGenerateQuiz);
+            closeQuizModalBtn.addEventListener('click', () => quizModal.style.display = 'none');
+            quizModal.addEventListener('click', (e) => {
+                if (e.target === quizModal) quizModal.style.display = 'none';
+            });
+            quizModalContent.addEventListener('click', (e) => {
+                if (e.target.id === 'show-answers-btn') {
+                    document.querySelectorAll('.correct-answer').forEach(el => el.style.display = 'block');
+                    e.target.disabled = true;
+                    e.target.textContent = 'Answers Revealed';
+                    e.target.classList.add('bg-gray-400', 'cursor-not-allowed');
+                }
+            });
+
+            // --- Initial Render ---
+            renderChapterFilters();
+            renderQACards();
+        });
+    </script>
+</body>
+</html>
+
